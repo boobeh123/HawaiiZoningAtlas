@@ -65,6 +65,11 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - **Downloads:** each overlay downloads once and is cached in `overlays`. It's only added to the map if its box is still checked when the file arrives.
   - **Messages:** `#overlayStatus`, a live region, shows loading and error text.
   - **Exception:** `loadSewer()` is still in the old style, and nothing calls it.
+- **District labels.** `buildDistrictOverlay()` adds a Leaflet tooltip ("House 23" or "Senate 12") at each House or Senate district's `getLabelPlacement()` point.
+  - **Visibility:** `updateDistrictLabels()` runs on `zoomend` and whenever an overlay turns on or off. A label shows only if its district has room on screen and it doesn't collide with another label, placing the largest districts first.
+  - **Two Leaflet traps:**
+    - **`permanent: true`:** these labels need it, or Leaflet closes them on any map click.
+    - **Hiding:** hidden labels use `visibility: hidden`, not `display: none`. Leaflet centers tooltips using their size, and a `display: none` label has no size, so it drifts off its spot.
 - **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()` and `calculateActiveArea()` do. Never build it from HTML strings.
 - **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
