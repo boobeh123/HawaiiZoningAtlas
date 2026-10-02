@@ -2,7 +2,9 @@ var map // Global variable to store the Leaflet map
 var towns // GeoJSON layer for town boundaries
 var townActive // Selected town name
 
-var dataLayer // GeoJSON layer with district data
+// GeoJSON layer with district data. Don't name it `dataLayer`: Google
+// Analytics owns window.dataLayer (see scripts/analytics.js).
+let zonesLayer
 var overlays = {} // An object to contain overlay layer groups, eg `transit`
 
 var zone2color = {
@@ -131,7 +133,7 @@ var loadZones = function (geojson) {
 
   var filters = getFilters()
 
-  dataLayer = L.geoJSON(geojson, {
+  zonesLayer = L.geoJSON(geojson, {
     attribution:
       'data by <a href="https://www.CodeWithAloha.org/">Kind Volunteers @ Code with Aloha</a>,\
       map development by <a href="https://CodeWithAloha.org">Code with Aloha</a>',
@@ -188,7 +190,7 @@ var loadZones = function (geojson) {
     updateUrl()
 
     var filters = getFilters()
-    dataLayer.setStyle(function (feature) {
+    zonesLayer.setStyle(function (feature) {
       return style(filters, feature)
     })
 
@@ -440,7 +442,7 @@ const calculateActiveArea = () => {
     )
 
   const townZones = townActive
-    ? dataLayer
+    ? zonesLayer
         .getLayers()
         .map((layer) => layer.feature)
         .filter((feature) => feature.properties[zTown] === townActive)
