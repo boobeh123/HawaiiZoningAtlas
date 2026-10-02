@@ -1,3 +1,12 @@
+:root {
+  /* Phone layout (see Media queries): the map's share of the screen, and the
+     gap between floating boxes and the screen edge */
+  --phoneMapHeight: 55dvh;
+  --phoneGap: 8px;
+  /* Leaflet's zoom buttons plus a gap, so boxes along the top stop short of them */
+  --zoomButtonsClearance: 54px;
+}
+
 body {
   padding: 0;
   margin: 0;
@@ -27,13 +36,6 @@ h2 {
   left: 10px;
   opacity: 0.95;
 }
-
-@media screen and (max-width: 600px) {
-  #sidebar {
-    display: none;
-  }
-}
-
 
 .leaflet-control-layers .driver-fix-stacking {
   z-index: 999 !important;
@@ -200,4 +202,84 @@ hr {
 
 .bb-dotted {
   border-bottom: 1px dotted #333;
+}
+
+/**************************************************************
+Media queries
+***************************************************************/
+
+/* Phones: the map takes the top of the screen, and the sidebar becomes a
+   panel underneath it with its own scrolling. initMap() uses the same 600px
+   breakpoint to start phones zoomed out. */
+@media screen and (max-width: 600px) {
+  #map {
+    height: var(--phoneMapHeight);
+  }
+
+  #sidebar {
+    top: var(--phoneMapHeight);
+    left: 0;
+    width: 100%;
+    height: calc(100dvh - var(--phoneMapHeight));
+    max-height: none;
+    border-radius: 0;
+    opacity: 1;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Across the top of the map, clear of the zoom buttons */
+  #activeAreaCalculator {
+    left: var(--phoneGap);
+    right: var(--zoomButtonsClearance);
+    width: auto;
+    margin-left: 0;
+  }
+
+  /* Two classes to match Leaflet's own rule, which this file loads after */
+  .leaflet-container .leaflet-control-attribution {
+    font-size: 10px;
+  }
+
+  /* There's no room beside the sidebar for the tour's popovers, so each one
+     sits across the top of the screen and scrolls when it's long. The
+     !important beats the position Driver.js sets inline. */
+  #driver-popover-item {
+    top: var(--phoneGap) !important;
+    right: var(--phoneGap) !important;
+    bottom: auto !important;
+    left: var(--phoneGap) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 2 * var(--phoneGap));
+    overflow-y: auto;
+  }
+
+  /* The popover's arrow would point at the wrong place. driver.min.css loads
+     after this file, hence the !important */
+  #driver-popover-item .driver-popover-tip {
+    display: none !important;
+  }
+}
+
+/* Tablets and phones held sideways: below 1140px wide, the centered area
+   panel would slide under the sidebar, so it sits beside it instead. 400px
+   is the sidebar's 10px offset, its 380px width, and a 10px gap. */
+@media screen and (min-width: 601px) and (max-width: 1139px) {
+  #activeAreaCalculator {
+    left: 400px;
+    right: var(--zoomButtonsClearance);
+    width: auto;
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
