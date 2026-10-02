@@ -732,10 +732,13 @@ var initMap = function () {
 
   L.control.zoom({ position: 'topright' }).addTo(map)
 
-  // CARTO's basemap key. It's public by design (it rides along on every tile
-  // request), so it lives here instead of .env. Limit it to this site's
-  // domains in the CARTO basemaps dashboard.
-  const cartoApiKey = 'cb1_476c_1_eebd1434484fdc3d41171c3b'
+  // CARTO basemap keys. They're public by design (they ride along on every
+  // tile request), so they live here instead of .env. Each one is limited to
+  // its own domains in the CARTO basemaps dashboard.
+  const isLocalSite = ['localhost', '127.0.0.1'].includes(location.hostname)
+  const cartoApiKey = isLocalSite
+    ? 'cb1_476c_1_eebd1434484fdc3d41171c3b' // localhost key
+    : 'cb1_476c_2_45dc132f92b3462bb9372f5e' // production key
 
   // CartoDB Positron baselayer, no labels
   var cartoTiles = L.tileLayer(
