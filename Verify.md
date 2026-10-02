@@ -6,7 +6,46 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Mobile layout (built, not committed yet)
+## Feature 6: Finish Clear filters, and outline the selected county (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-02). You chose cyan for the outline.
+
+**What changed:**
+- [index.html](index.html): the ✕ beside "Permitted Residential Uses" is a real `<button>` labeled "Clear filters".
+- [scripts/map.js](scripts/map.js):
+  - **`clearFilters()`:**
+    - **Filters:** it unchecks every housing filter and closes their groups.
+    - **County:** it clears the county from the map, the form, and the URL.
+    - **Update:** then the usual update runs once.
+    - **Left alone:** overlays and opacity stay as they are.
+  - **`updateResetButton()`:** the ✕ shows only while a housing filter or a county is active.
+  - **`townStyle` and `drawCountyOutlines()`:** the selected county is outlined in 5px cyan and drawn on top, and the other counties get 2px. The outlines have their own pane, just above the House and Senate lines.
+- [style.css](style.css): one rule, so the button's `hidden` attribute can actually hide it. Google's Material Icons style would otherwise keep it visible.
+
+**Claude's checks** (headless Edge, old code vs. new; all passed, no errors):
+
+| Check | Old | New |
+|---|---|---|
+| ✕ on a fresh page | showing, with nothing to clear | hidden |
+| Overlays after Clear (transit, House, Senate) | all turned off | still on, transit's note still showing |
+| County after Clear | gone from the map, still in the URL | gone from the map, the form, and the URL |
+| Reload after Clear | Honolulu comes back | stays cleared |
+| County picked, no filters | ✕ showed (only because of House and Senate) | ✕ shows. Clear removes the county |
+| Keyboard | Tab can't reach it | Tab reaches it, and Enter and Space both clear. Skipped while hidden |
+| Selected outline | 3px yellow, under the district lines | 5px cyan, on top |
+| Other outlines | 3px | 2px |
+| ✕ look, desktop and phone | 20×20 grey circle | identical size, place, and style |
+
+**Your checks:**
+- [ ] Open http://localhost:8000 in a new tab. With no filters on, there's no ✕ beside "Permitted Residential Uses".
+- [ ] Turn on **1-Family Housing** and click Oʻahu. The ✕ appears, and Oʻahu gets a thick cyan outline over the yellow Senate lines.
+- [ ] Click the ✕. The filters clear, the area panel closes, the cyan outline goes away, and House and Senate stay on.
+- [ ] Press F5. Oʻahu stays unselected.
+- [ ] Turn on **2-Family Housing**, press Tab until the ✕ has a focus ring, then press Enter. The filters clear.
+
+---
+
+## Mobile layout (built and committed)
 
 - [x] Plan approved in chat (2026-10-02).
 
@@ -47,7 +86,7 @@ No HTML changes.
 
 ---
 
-## Shared links can turn House and Senate off (built, not committed yet)
+## Shared links can turn House and Senate off (built and committed)
 
 - [x] Approved in chat (2026-10-02).
 
