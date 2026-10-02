@@ -732,9 +732,14 @@ var initMap = function () {
 
   L.control.zoom({ position: 'topright' }).addTo(map)
 
+  // CARTO's basemap key. It's public by design (it rides along on every tile
+  // request), so it lives here instead of .env. Limit it to this site's
+  // domains in the CARTO basemaps dashboard.
+  const cartoApiKey = 'cb1_476c_1_eebd1434484fdc3d41171c3b'
+
   // CartoDB Positron baselayer, no labels
   var cartoTiles = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+    `https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`,
     {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -766,9 +771,9 @@ var initMap = function () {
     )
     .addTo(map)
 
-  // CartoDB Positron baselayer, no labels
+  // CartoDB Positron labels only, drawn above the zones
   L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
+    `https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`,
     {
       attribution: '',
       subdomains: 'abcd',
