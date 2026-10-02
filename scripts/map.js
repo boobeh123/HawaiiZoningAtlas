@@ -719,6 +719,27 @@ var loadDHHL = function () {
   })
 }
 
+// localStorage flag that stops the intro tour from showing again once this
+// browser has closed or finished it. Clearing the site's data brings it back.
+const tourSeenKey = 'hzaTourSeen'
+
+const hasSeenTour = () => {
+  try {
+    return localStorage.getItem(tourSeenKey) === 'true'
+  } catch {
+    // Storage can be blocked (for example, in some private windows), so show the tour
+    return false
+  }
+}
+
+const rememberTourSeen = () => {
+  try {
+    localStorage.setItem(tourSeenKey, 'true')
+  } catch {
+    // Storage is blocked, so the tour will simply show again next time
+  }
+}
+
 /**
  * This function initializes the map. It should be called as soon as
  * DOM is loaded.
@@ -837,6 +858,8 @@ var initMap = function () {
   var driver = new Driver({
     animate: false,
     allowClose: false,
+    // Driver.js calls this when the tour is closed or finished
+    onReset: rememberTourSeen,
   })
   // Define the steps for introduction
   driver.defineSteps([
@@ -919,8 +942,10 @@ var initMap = function () {
       },
     },
   ])
-  // Start the introduction
-  driver.start()
+  // Start the introduction, unless this browser has already closed or finished it
+  if (!hasSeenTour()) {
+    driver.start()
+  }
 }
 
 // Initialize the map when DOM is loaded
