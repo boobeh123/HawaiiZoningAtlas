@@ -6,7 +6,73 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 3: Move Google Analytics into its own file (built, not committed yet)
+## Basemap key fix (built and committed)
+
+- [x] Key received in chat (2026-10-01). It works for both localhost and the live site.
+- [ ] In the CARTO basemaps dashboard, restrict the key to `hawaiizoningatlas.netlify.app` and `localhost`. Right now it works from any website (Claude tested a random one), so anyone could use up your free requests.
+
+**What changed:**
+- [scripts/map.js](scripts/map.js): a `cartoApiKey` constant in `initMap()`, added as `?key=` to both CARTO tile URLs (the base map and the labels).
+- [CLAUDE.md](CLAUDE.md): the Deployment section now describes Netlify and notes which keys can live in site code. The Overview links the Netlify site and explains the fork.
+
+**Claude's checks** (headless Edge, old code vs. new):
+- Before: all 60 CARTO tiles on the first screen were the "API KEY REQUIRED" image.
+- After: none of the 60 are, and every tile request carries the key.
+- The screenshots show the light basemap and the place names back above the zones. No errors.
+
+- [ ] On localhost, the map shows the light basemap with place names (Honolulu, Kāneʻohe, Kailua-Kona, and so on) and no "API KEY REQUIRED" anywhere. Zoom in and out a few levels.
+- [ ] Switch to **Satellite** and back to **Map**. Both work.
+- [ ] After you push, check https://hawaiizoningatlas.netlify.app the same way.
+
+---
+
+## Feature 3b: Refresh the county stats from the Census API (built and committed)
+
+- [x] Scope decided in chat (2026-10-01): refresh the three current stats to the latest ACS 5-year release (2020–2024). Broader options can come later.
+- [x] Plan approved in chat (2026-10-01).
+- [x] The key is in `.env` as `CENSUS_API_KEY`.
+- [x] Ran the check (2026-10-01).
+  - The current numbers mix two releases: income and cost burden match 2015–2019, and Native Hawaiian matches 2016–2020.
+  - The cost-burden definition is `allHouseholds` from table DP04, which matched all four counties exactly. It's now set in the script.
+- [x] Ran the update (2026-10-01). Every county now shows 2020–2024 numbers:
+
+| County | Income | Native Hawaiian | Cost-burdened |
+|---|---|---|---|
+| Hawaii | $62,409 → $78,639 | 9% → 9% | 33.4% → 33.2% |
+| Honolulu | $85,857 → $106,195 | 5.4% → 5.1% | 41.2% → 41.5% |
+| Kauai | $83,554 → $97,668 | 7.5% → 7.7% | 35.8% → 37.3% |
+| Maui | $80,948 → $97,161 | 8.1% → 7.9% | 38.8% → 39.5% |
+
+**Built so far:**
+- **[.env.example](.env.example):** contains `CENSUS_API_KEY=`.
+- **[tools/fetchDemographics.js](tools/fetchDemographics.js):** CommonJS, Node built-ins only.
+  - `--check` compares today's numbers with each release from 2013–2017 through 2017–2021. It tests income, Native Hawaiian, and five possible cost-burden definitions, then prints which ones match all four counties.
+  - `2024` rewrites data/demographics.js from the 2020–2024 release, using the cost-burden definition that the check confirms. It refuses to run until that definition is set.
+  - The key is only sent to the Census API. Errors show the HTTP status, never the URL.
+- **[CLAUDE.md](CLAUDE.md):** documents the two commands and the rule that the Census key never goes in site code.
+
+**Claude's checks so far** (no key needed):
+- Every label resolves to exactly one variable in each release from 2017 to 2024, including Native Hawaiian moving from `DP05_0053PE` to `DP05_0071PE` in 2024.
+- The cost-burden math is correct on hand-made numbers, a Census "no estimate" value stops the script, and the generated file loads as a browser script.
+- Without a key, with bad arguments, or before the definition is set, the script stops with a clear message.
+
+**After the update:** [scripts/map.js](scripts/map.js) now takes the Native Hawaiian label's release name from `demographicsSource` in the new [data/demographics.js](data/demographics.js).
+
+**Claude's checks after the update** (headless Edge, old code vs. new):
+- A zone was clicked in each of the four counties. Every panel shows the numbers from the table above.
+- The Native Hawaiian label reads "2020–2024 ACS 5-year estimates".
+- No errors before or after.
+- Honolulu's six-figure income still fits the panel layout.
+- `.env` is ignored by git, and `.env.example` isn't.
+
+- [ ] Click a zone in each county. The panel shows the numbers from the table above.
+- [ ] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020–2024 ACS 5-year estimates)".
+- [ ] Run `git status`. `.env` isn't listed, so your Census key can't be committed.
+- [ ] Once a year, when the Census publishes a new 5-year release (usually in December), rerun `node --env-file=.env tools/fetchDemographics.js <year>`.
+
+---
+
+## Feature 3: Move Google Analytics into its own file (built and live)
 
 - [x] Plan approved in chat (2026-10-01). You chose (c): keep the org's ID, `G-ZTZX623WY7`.
 
@@ -91,10 +157,10 @@ This fixes review items #3 and #10.
 - [ ] Hover over a few zones. The tooltips look the same as before (name, county, flags).
 - [ ] Hover over a "Not Zoned" area. It shows **Not Zoned** and the county.
 - [ ] Click a zone. The panel shows the acreage sentence and three stats: HH Income, Native Hawaiian, Cost-Burdened.
-- [ ] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)".
-- [ ] Turn on **Transit Stations (Rail)** and click a station marker. Its name appears.
-- [ ] In the DevTools console, run `zonesLayer.eachLayer((l) => { l.feature.properties.Z = '<img src=x onerror=alert(1)>' })`, then hover over a zone. The tooltip shows that text exactly as typed, and no alert pops up. Reload the page afterwards. (Before Feature 3, this variable was called `dataLayer`.)
-- [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. The map loads, no panel appears, and the console shows no red errors.
+- [X] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)". (Since Feature 3b, it reads "2020–2024 ACS 5-year estimates".)
+- [X] Turn on **Transit Stations (Rail)** and click a station marker. Its name appears.
+- [X] In the DevTools console, run `zonesLayer.eachLayer((l) => { l.feature.properties.Z = '<img src=x onerror=alert(1)>' })`, then hover over a zone. The tooltip shows that text exactly as typed, and no alert pops up. Reload the page afterwards. (Before Feature 3, this variable was called `dataLayer`.)
+- [X] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. The map loads, no panel appears, and the console shows no red errors.
 
 **Expected console noise:** one yellow warning, "Deprecated include of L.Mixin.Events". It comes from the vendored [leaflet-pattern.js](scripts/leaflet-pattern.js) and was already there before Feature 1.
 
@@ -102,5 +168,5 @@ This fixes review items #3 and #10.
 
 ## Repo housekeeping
 
-- [ ] In your repo's **Actions** tab, disable **Pull and Validate Spreadsheet Data**: pick it in the left sidebar, open the `⋯` menu, and choose **Disable workflow**. It runs daily and will fail until Feature 8.
-- [ ] Disable **Auto-assign issue** the same way. It's broken because `new Octokit` isn't defined in github-script v4.
+- [X] In your repo's **Actions** tab, disable **Pull and Validate Spreadsheet Data**: pick it in the left sidebar, open the `⋯` menu, and choose **Disable workflow**. It runs daily and will fail until Feature 8.
+- [X] Disable **Auto-assign issue** the same way. It's broken because `new Octokit` isn't defined in github-script v4.
