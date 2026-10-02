@@ -20,8 +20,8 @@
     <a href="https://github.com/CodeWithAloha/Hawaii-Zoning-Atlas/wiki">
       Wiki
     </a>
-        <span> | </span>
-  	<a href="https://hawaiizoningatlas.netlify.app">
+    <span> | </span>
+    <a href="#how-it-works">
       Refactored Website
     </a>
   </h3>
@@ -147,3 +147,107 @@ sequenceDiagram
         Actions->>Actions: Commit the generated `final.geojson` to the repository
     end
 ```
+
+## How It Works
+Deployed on Netlify: [hawaiizoningatlas.netlify.app](https://hawaiizoningatlas.netlify.app)
+
+Our research team read the complete zoning codes of all four counties and recorded which kinds of housing each zoning district allows, and under what rules, following the National Zoning Atlas's method. A Python notebook joins that spreadsheet to each county's zoning map, subtracts federal and state land (which counties can't zone), and writes a single GeoJSON file. The website draws that file on a Leaflet map. Choose a housing type, and every district that doesn't allow it turns gray. Click a district to see how much of its county's zoned land meets your filters.
+
+### Features
+* Static webpage deployed on Netlify
+* Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential
+* Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
+* County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
+* County stats from the Census Bureau's 2020–2024 American Community Survey: median household income, Native Hawaiian residents, and cost-burdened households
+* Overlays for waterways, federal lands, state lands, Hawaiian Home Lands (DHHL), rail stations with half-mile circles, and State House and Senate districts
+* House and Senate district labels that appear as you zoom in and never overlap
+* Overlays that download only when they're first turned on, with loading and error messages
+* Shareable links that save the map view and every filter, and ignore anything that doesn't match a real filter
+* Map and satellite basemaps, plus a zone opacity slider
+* Hover tooltips with each district's name and county
+* Spreadsheet and link text rendered as text, never as HTML, to prevent cross-site scripting (XSS)
+* A guided intro tour that shows only on the first visit
+* County stats generated from the Census API by a Node script, so the API key never reaches the browser
+* Data pipeline in Python that joins the research spreadsheet to each county's GIS zoning map
+
+### Technologies
+<img src="https://img.shields.io/badge/html5%20-%23E34F26.svg?&style=for-the-badge&logo=html5&logoColor=white" alt="HTML" height="50"/><img src="https://img.shields.io/badge/css3%20-%231572B6.svg?&style=for-the-badge&logo=css&logoColor=white" alt="CSS" height="50"/><img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" height="50"/><img src="https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white" alt="jQuery" height="50"/><img src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" alt="Leaflet" height="50"/><img src="https://img.shields.io/badge/node.js%20-3F873F.svg?&style=for-the-badge&logo=node.js&logoColor=white" alt="Node" height="50"/><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" height="50"/><img src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" alt="pandas" height="50"/><img src="https://img.shields.io/badge/GeoPandas-139C5A?style=for-the-badge&logo=geopandas&logoColor=white" alt="GeoPandas" height="50"/><img src="https://img.shields.io/badge/Jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter" height="50"/><img src="https://img.shields.io/badge/QGIS-589632?style=for-the-badge&logo=qgis&logoColor=white" alt="QGIS" height="50"/><img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" height="50"/><img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify" height="50"/>
+
+### Full Breakdown
+
+This is a rebuild of [Code with Aloha's Hawaii Zoning Atlas](https://github.com/CodeWithAloha/Hawaii-Zoning-Atlas) on its original static stack. Nothing in the app needs a server: the data is processed ahead of time, and Netlify serves plain HTML, CSS, and JavaScript.
+
+#### The research
+
+Our research team read each county's zoning code and filled in a spreadsheet with one row per zoning district, following the National Zoning Atlas's [How to Make a Zoning Atlas](https://www.zoningatlas.org/how). Each row records:
+
+- whether 1-family, 2-family, 3-family, and 4+-family housing and ADUs are allowed as of right, allowed only after a public hearing, or prohibited
+- each housing type's minimum lot size, setbacks, parking, height limit, and minimum unit size
+- whether housing is limited to elderly or affordable units, and how ADUs are restricted (owner occupancy, renters, size)
+
+The county tabs are combined into [data-pipeline/hawaii-zoning-data.csv](data-pipeline/hawaii-zoning-data.csv). Each county's zoning map is prepared in **QGIS** and saved as a GeoPackage in [data-pipeline/gis/](data-pipeline/gis/).
+
+#### The data pipeline
+
+The **Jupyter** notebook [CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb) turns the spreadsheet and the maps into the one file the website reads:
+
+1. Reads each county's map with **GeoPandas** and merges every polygon of the same district into one shape
+2. Gives each district an ID built from its state, county, and district name (Maui's `P-1` becomes `HI--MAUI--P1`), which links the map to its spreadsheet row
+3. Measures each district in an equal-area projection (EPSG:6933), then subtracts federal and state land, which counties can't zone. What's left is the district's zoned acreage (`MA`), which the area calculator adds up
+4. Turns the spreadsheet's answers into filter values with **pandas**. For example, minimum lot sizes are grouped into five ranges, from none to 1.84+ acres
+5. Shortens the column names and values to keep the file small (`1-Family Treatment: Allowed/Conditional` becomes `1F: A`), simplifies the shapes to within about 2 m, and writes `final.geojson`, which is copied to [data/final.geojson](data/final.geojson)
+
+#### The website
+
+[index.html](index.html) holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. **Tachyons** classes handle the layout.
+
+- **Loading:** `loadMapData()` fetches the county outlines and the zoning districts in parallel. A status message shows until they arrive, or explains the error if they don't
+- **Filters:** each checkbox's `name` is a property in `final.geojson`, and its `value` is one accepted answer (`name="1F" value="AH"` means 1-family housing allowed only after a public hearing). A district keeps its color only if it matches every checked group; otherwise it turns gray
+- **Area calculator:** clicking a district selects its county. The panel adds up the zoned acres of that county's matching districts, shows them as a share of the county's total, and lists the county's Census stats from [data/demographics.js](data/demographics.js)
+- **Overlays:** each overlay downloads the first time it's turned on and stays cached after that, so the 11 MB waterways file only loads for visitors who ask for it. A status line reports loading and errors
+- **District labels:** each House and Senate label sits at the center of its district's largest piece, or in the widest part of the shape when that center falls outside it. After every zoom, labels are placed largest district first, and each one shows only if its district has room for it on screen and it doesn't overlap another label
+- **Shareable links:** the map view and every filter are saved in the URL (`#zoom/lat/lng/filters`) with `URLSearchParams`. Opening a link restores only values that match a real checkbox, and a link with junk in it gets rewritten
+- **Safe rendering:** tooltips and panels are built from text nodes (`createTextElement()`), never from HTML strings, so text from the spreadsheet or a link can't run as code
+- **Basemaps:** CARTO's light basemap or Esri satellite imagery, with CARTO's place names drawn above the zoning districts. There's one CARTO API key for local development and another for the live site
+- **Analytics:** Google Analytics loads from [scripts/analytics.js](scripts/analytics.js) and skips local visits
+- **Intro tour:** **Driver.js** walks first-time visitors through the map, and a localStorage flag keeps it from showing again
+
+#### County stats
+
+[tools/fetchDemographics.js](tools/fetchDemographics.js) is a **Node.js** script (built-in `fetch`, no packages) that pulls each county's numbers from the Census Bureau's API and writes them to `data/demographics.js`:
+
+- median household income (table DP03)
+- the share of residents who identify as Native Hawaiian (DP05)
+- the share of households spending 30% or more of their income on housing (DP04)
+
+It finds each value by its label, because the Census Bureau renumbers variables between releases. Its `--check` mode compares the site's numbers against several releases and definitions, which showed that the original numbers mixed two releases. The API key stays in `.env` and never reaches the browser.
+
+#### Running it
+
+| Command | What it does |
+|---|---|
+| `python -m http.server 8000` | Serves the site at http://localhost:8000. The map's data can't load from `file://` |
+| `node --env-file=.env tools/fetchDemographics.js --check` | Shows which Census release and definitions match the current county stats, without writing anything |
+| `node --env-file=.env tools/fetchDemographics.js 2024` | Rewrites `data/demographics.js` from the 2020–2024 release. Needs `CENSUS_API_KEY` in `.env` (see `.env.example`) |
+| Run [CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb) from `data-pipeline/` | Rebuilds `final.geojson` from the spreadsheet CSV and the county maps. Its packages are listed in [data-pipeline/requirements.txt](data-pipeline/requirements.txt) |
+
+#### What's changed in this rebuild
+
+- **Safe rendering:** district data and link text are inserted as text, never parsed as HTML, so nothing from the spreadsheet or a shared link can run as code
+- **Validated links:** shared links restore only values that match a real filter, and junk gets cleaned out of the URL
+- **Google Analytics:** moved into its own file. The map's `dataLayer` variable was renamed `zonesLayer`, because it was overwriting Google Analytics' own `dataLayer`
+- **Basemap keys:** added after CARTO started requiring API keys in September 2026, which had replaced every map tile with an error image
+- **County stats:** refreshed to the 2020–2024 Census estimates by a script. The old numbers mixed two releases
+- **Intro tour:** shows once instead of on every visit
+- **Overlays:** download when turned on instead of all at once on every visit, with loading and error messages
+- **District labels:** House and Senate districts are labeled on the map, replacing popups that could never open
+
+#### Up next
+
+- Finish the Clear filters button, and outline the selected county
+- Fix the pipeline's mappings so the public-hearing, ADU, and minimum unit size filters match the data
+- Revive the GitHub Actions that sync the spreadsheet into the repo
+- Shrink `final.geojson`, which is about 25 MB today
+- Semantic HTML and accessibility
+- Replace Tachyons with plain CSS
+- A mobile layout: below 600px wide, the sidebar with the filters is hidden today
