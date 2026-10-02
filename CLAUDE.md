@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Interactive Leaflet map (https://hawaiizoningatlas.com) showing which housing types Hawaii's zoning districts permit. Per the README, the project is in maintenance mode: bug fixes only, no new features. It was forked from the Connecticut Zoning Atlas. Some leftovers from the fork aren't Hawaii data and nothing loads them: `data/transit.js` (CT rail stations), comments about "169 towns", and the geocoder bounds in commented-out code.
+Interactive Leaflet map (live at https://hawaiizoningatlas.netlify.app) showing which housing types Hawaii's zoning districts permit. This repo is a fork: `origin` is boobeh123/HawaiiZoningAtlas and `upstream` is the CodeWithAloha org repo. Per its README, the org project is in maintenance mode. This fork is being actively improved, and `Verify.md` tracks the work in progress. It was forked from the Connecticut Zoning Atlas. Some leftovers from the fork aren't Hawaii data and nothing loads them: `data/transit.js` (CT rail stations), comments about "169 towns", and the geocoder bounds in commented-out code.
 
 Two independent halves:
 - **Site** (repo root): static HTML/CSS/JS. No build step, package.json, tests, or JS linting.
@@ -19,6 +19,13 @@ python -m http.server 8000   # then open http://localhost:8000
 ```
 
 The Driver.js intro tour starts on every page load; step through or close it to reach the map. Test at desktop width, because the sidebar, filters included, is hidden below 600px.
+
+**County stats.** `tools/fetchDemographics.js` generates `data/demographics.js` from the Census API, using Node built-ins only. The key lives in `.env` as `CENSUS_API_KEY` (see `.env.example`).
+
+```sh
+node --env-file=.env tools/fetchDemographics.js --check   # which release and definitions match the current numbers; writes nothing
+node --env-file=.env tools/fetchDemographics.js 2024      # rewrite data/demographics.js from the 2020–2024 release
+```
 
 **CSV validation.** Run from `data-pipeline/csv-validation/`, since it reads `../hawaii-zoning-data.csv` relative to the working directory:
 
@@ -35,7 +42,13 @@ Don't follow the Docker steps in `data-pipeline/README.md`. The Dockerfile's `CM
 
 ## Deployment
 
-`CNAME` points hawaiizoningatlas.com to GitHub Pages (`codeforhawaii.github.io`), which serves the repo root as-is, so **a push to `main` is a production deploy**. Each visit downloads `data/final.geojson` (~25 MB) and every overlay GeoJSON, so keep committed GeoJSON simplified and minified.
+The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (~25 MB) and every overlay GeoJSON, so keep committed GeoJSON simplified and minified.
+
+**Keys.** Anything the browser loads is public, so only public keys belong in site code.
+- **CARTO basemap key:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs.
+- **Without it:** CARTO serves an "API KEY REQUIRED" image for every tile. This started in September 2026.
+- **How it's protected:** with domain restrictions in CARTO's basemaps dashboard, not by hiding it.
+- **Census API key:** secret. Only `tools/fetchDemographics.js` uses it, on your machine, and the script bakes the numbers into `data/demographics.js`. The key never goes in site code.
 
 ## Site architecture (`index.html` + `scripts/map.js`)
 
