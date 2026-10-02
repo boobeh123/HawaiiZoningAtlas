@@ -18,7 +18,7 @@ Two independent halves:
 python -m http.server 8000   # then open http://localhost:8000
 ```
 
-The Driver.js intro tour starts on every page load; step through or close it to reach the map. Test at desktop width, because the sidebar, filters included, is hidden below 600px.
+The Driver.js intro tour shows on each visit until it's closed or finished once in that browser. That sets the localStorage flag `hzaTourSeen`. To see the tour again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload. Test at desktop width, because the sidebar, filters included, is hidden below 600px.
 
 **County stats.** `tools/fetchDemographics.js` generates `data/demographics.js` from the Census API, using Node built-ins only. The key lives in `.env` as `CENSUS_API_KEY` (see `.env.example`).
 
