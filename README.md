@@ -14,11 +14,15 @@
 <div align="center">
   <h3>
   	<a href="https://hawaiizoningatlas.com">
-      Website
+      Official Website
     </a>
     <span> | </span>
     <a href="https://github.com/CodeWithAloha/Hawaii-Zoning-Atlas/wiki">
       Wiki
+    </a>
+        <span> | </span>
+  	<a href="https://hawaiizoningatlas.netlify.app">
+      Refactored Website
     </a>
   </h3>
 </div>
