@@ -155,6 +155,7 @@ Our research team read the complete zoning codes of all four counties and record
 
 ### Features
 * Static webpage deployed on Netlify
+* Responsive to mobile viewports: on phones, the filters sit in a scrolling panel under the map
 * Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
 * County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
@@ -211,6 +212,7 @@ The **Jupyter** notebook [CombineJurisdictions.ipynb](data-pipeline/CombineJuris
 - **Basemaps:** CARTO's light basemap or Esri satellite imagery, with CARTO's place names drawn above the zoning districts. There's one CARTO API key for local development and another for the live site
 - **Analytics:** Google Analytics loads from [scripts/analytics.js](scripts/analytics.js) and skips local visits
 - **Intro tour:** **Driver.js** walks first-time visitors through the map, and a localStorage flag keeps it from showing again
+- **Phones:** at 600px wide and below, the map takes the top of the screen, and the sidebar becomes a scrolling panel underneath. Phones also open zoomed out, with every county in view
 
 #### County stats
 
@@ -241,13 +243,14 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Intro tour:** shows once instead of on every visit
 - **Overlays:** download when turned on instead of all at once on every visit, with loading and error messages
 - **District labels:** House and Senate districts are labeled on the map, replacing popups that could never open
+- **Data pipeline:** the public-hearing, ADU, and minimum unit size filters now match the data, and 7 districts that showed as Not Zoned now have their names
+- **Mobile layout:** phones get the map above a scrolling filter panel, and on tablets the area panel no longer slides under the sidebar
 
 #### Up next
 
 - Finish the Clear filters button, and outline the selected county
-- Fix the pipeline's mappings so the public-hearing, ADU, and minimum unit size filters match the data
 - Revive the GitHub Actions that sync the spreadsheet into the repo
 - Shrink `final.geojson`, which is about 25 MB today
 - Semantic HTML and accessibility
 - Replace Tachyons with plain CSS
-- A mobile layout: below 600px wide, the sidebar with the filters is hidden today
+- A mobile drawer: a button to hide and show the filter panel on phones
