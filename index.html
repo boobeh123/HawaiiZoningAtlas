@@ -49,6 +49,9 @@
 <body>
 	<div id="map" class="vw-100 vh-100"></div>
 
+	<!-- Loading and error messages for the zoning data, announced to screen readers -->
+	<p class="mapStatus" id="mapStatus" role="status">Loading zoning data…</p>
+
 	<div class="pa3 shadow-1 dn bg-white" id="activeAreaCalculator"></div>
 
 	<div id="sidebar" class="pa3 br1">
@@ -436,6 +439,8 @@
 
 			<div id="Overlays">
 				<h2 class="f5 mb1 black-40">Overlays</h2>
+				<!-- Overlay loading and error messages, announced to screen readers -->
+				<p class="overlayStatus" id="overlayStatus" role="status"></p>
 
 				<label class="f5"
 					title="Includes ponds, lakes, oceans, swamps, and the area covered by large rivers, streams, and/or canals. Data from USG National Hydrography Dataset-Hawaii.">

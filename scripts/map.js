@@ -177,12 +177,8 @@ var loadZones = function (geojson) {
     },
   }).addTo(map)
 
-  // Add selected overlays to the map
-  $('input[name="Overlay"]:checked').each(function (i, el) {
-    if (overlays[el.value]) {
-      overlays[el.value].addTo(map)
-    }
-  })
+  // Show the overlays that were checked in the link. Their files download now.
+  syncOverlays()
 
   var form = document.getElementById('form')
 
@@ -203,16 +199,8 @@ var loadZones = function (geojson) {
 
     calculateActiveArea()
 
-    $('input[name="Overlay"]').each(function (i, el) {
-      var value = el.value
-      if (filters['Overlay'] && filters['Overlay'].indexOf(value) >= 0) {
-        overlays[value].addTo(map)
-      } else {
-        if (map.hasLayer(overlays[value])) {
-          map.removeLayer(overlays[value])
-        }
-      }
-    })
+    // Downloads an overlay's file the first time it's turned on
+    syncOverlays()
 
     if ($('.main-in-group:checked').length > 0) {
       $('#resetFilters').show()
@@ -489,122 +477,137 @@ const calculateActiveArea = () => {
 }
 
 /*
- * Creates a layer group of rail/fastrak markers from `transit.js` data.
+ * Fetches a GeoJSON file and returns the parsed data. Throws if the request
+ * fails, so the caller can show an error message.
  */
-var loadTransit = function () {
-  $.getJSON('./data/rail-transit.geojson', (geojson) => {
-    const transitMarkers = geojson.features.map(function (o) {
-      return L.marker(o.geometry.coordinates.reverse()).bindPopup(
-        document.createTextNode(o.properties.STATION)
-      )
-    })
+const fetchGeoJson = async (path) => {
+  const response = await fetch(path)
+  if (!response.ok) {
+    throw new Error(`${path} returned HTTP ${response.status}`)
+  }
+  return response.json()
+}
 
-    const transitCircles = geojson.features.map(function (o) {
-      return L.circle(o.geometry.coordinates, {
-        radius: 804.5, // half a mile, in meters
+/*
+ * Returns a layer group of the rail stations, a half-mile circle around each
+ * one, and the rail line
+ */
+const loadTransit = async () => {
+  const [stations, railLine] = await Promise.all([
+    fetchGeoJson('./data/rail-transit.geojson'),
+    fetchGeoJson('./data/rail-transit-line.geojson'),
+  ])
+
+  const transitMarkers = stations.features.map(function (o) {
+    return L.marker(o.geometry.coordinates.reverse()).bindPopup(
+      document.createTextNode(o.properties.STATION)
+    )
+  })
+
+  const transitCircles = stations.features.map(function (o) {
+    return L.circle(o.geometry.coordinates, {
+      radius: 804.5, // half a mile, in meters
+      weight: 1,
+      color: 'pink',
+      fillColor: 'pink',
+      opacity: 0.9,
+      fillOpacity: 0.8,
+      interactive: false,
+    })
+  })
+
+  // The following was written by Mike A.
+  const transitLines = railLine.features.map(function (o) {
+    return o.geometry.coordinates.map((oo) => {
+      oo = oo.map((e) => e.reverse())
+      return L.polyline(oo, {
         weight: 1,
         color: 'pink',
-        fillColor: 'pink',
         opacity: 0.9,
-        fillOpacity: 0.8,
         interactive: false,
       })
     })
-
-    // The following was written by Mike A.
-    $.getJSON('./data/rail-transit-line.geojson', (geojson) => {
-      var transitLines = geojson.features.map(function (o) {
-        return o.geometry.coordinates.map((oo) => {
-          oo = oo.map((e) => e.reverse())
-          return L.polyline(oo, {
-            weight: 1,
-            color: 'pink',
-            opacity: 0.9,
-            interactive: false,
-          })
-        })
-      })
-
-      overlays['transit'] = L.layerGroup(
-        transitMarkers.concat(transitCircles).concat(transitLines.flat())
-      )
-    })
   })
+
+  return L.layerGroup(
+    transitMarkers.concat(transitCircles).concat(transitLines.flat())
+  )
 }
 
-//* creates a layer of hydrology features
-var loadHydro = function () {
-  $.getJSON('./data/hydro.min.geojson', function (geojson) {
-    var stripes = new L.StripePattern({
-      height: 2,
-      width: 2,
-      weight: 1,
-      spaceWeight: 1,
-      angle: -45,
-      color: '#C6DDFF',
-      spaceColor: '#9cb4dc',
-      opacity: 0.5,
-      spaceOpacity: 0.5,
-    })
-    stripes.addTo(map)
+//* returns a layer of hydrology features
+const loadHydro = async () => {
+  const geojson = await fetchGeoJson('./data/hydro.min.geojson')
+  const stripes = new L.StripePattern({
+    height: 2,
+    width: 2,
+    weight: 1,
+    spaceWeight: 1,
+    angle: -45,
+    color: '#C6DDFF',
+    spaceColor: '#9cb4dc',
+    opacity: 0.5,
+    spaceOpacity: 0.5,
+  })
+  stripes.addTo(map)
 
-    overlays['hydro'] = L.geoJSON(geojson, {
-      interactive: false,
-      stroke: true,
-      color: '#C6DDFF',
-      weight: 0.5,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 1,
-        fillPattern: stripes,
-      },
-    })
+  return L.geoJSON(geojson, {
+    interactive: false,
+    stroke: true,
+    color: '#C6DDFF',
+    weight: 0.5,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 1,
+      fillPattern: stripes,
+    },
   })
 }
 
 /*
- * Given house GeoJSON file in `bounds`, adds non-interactive house boundaries
- * layer to the map
+ * Returns the non-interactive House district boundaries layer
  */
-var loadHouse = function () {
-  $.getJSON('./data/house-districts.min.geojson', function (geojson) {
-    overlays['house'] = L.geoJSON(geojson, {
-      interactive: false,
-      stroke: true,
-      color: '#E06AAA',
-      weight: 1,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 0,
-      },
-    })
-
-    overlays['house'].eachLayer(function (layer) {
-      layer.bindPopup(
-        document.createTextNode(layer.feature.properties.state_house)
-      )
-    })
+const loadHouse = async () => {
+  const geojson = await fetchGeoJson('./data/house-districts.min.geojson')
+  const houseLayer = L.geoJSON(geojson, {
+    interactive: false,
+    stroke: true,
+    color: '#E06AAA',
+    weight: 1,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 0,
+    },
   })
+
+  houseLayer.eachLayer(function (layer) {
+    layer.bindPopup(
+      document.createTextNode(layer.feature.properties.state_house)
+    )
+  })
+  return houseLayer
 }
 
-var loadSenate = function () {
-  $.getJSON('./data/senate-districts.min.geojson', function (geojson) {
-    overlays['senate'] = L.geoJSON(geojson, {
-      interactive: false,
-      stroke: true,
-      color: '#F8F807',
-      weight: 1,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 0,
-      },
-    })
-    overlays['senate'].eachLayer(function (layer) {
-      layer.bindPopup(
-        document.createTextNode(layer.feature.properties.state_senate)
-      )
-    })
+/*
+ * Returns the non-interactive Senate district boundaries layer
+ */
+const loadSenate = async () => {
+  const geojson = await fetchGeoJson('./data/senate-districts.min.geojson')
+  const senateLayer = L.geoJSON(geojson, {
+    interactive: false,
+    stroke: true,
+    color: '#F8F807',
+    weight: 1,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 0,
+    },
   })
+  senateLayer.eachLayer(function (layer) {
+    layer.bindPopup(
+      document.createTextNode(layer.feature.properties.state_senate)
+    )
+  })
+  return senateLayer
 }
 
 // todo: add sewerlines overlay (oahu is done - need to do neighbor islands)
@@ -632,55 +635,53 @@ var loadSewer = function () {
   })
 }
 
-//* federal land overlay
-var loadFederal = function () {
-  $.getJSON('./data/federal-land.min.geojson', function (geojson) {
-    var stripes = new L.StripePattern({
-      height: 2,
-      width: 2,
-      weight: 1,
-      spaceWeight: 1,
-      angle: 30,
-      color: '#B47A69',
-    })
+//* returns the federal land overlay
+const loadFederal = async () => {
+  const geojson = await fetchGeoJson('./data/federal-land.min.geojson')
+  const stripes = new L.StripePattern({
+    height: 2,
+    width: 2,
+    weight: 1,
+    spaceWeight: 1,
+    angle: 30,
+    color: '#B47A69',
+  })
 
-    stripes.addTo(map)
+  stripes.addTo(map)
 
-    overlays['federal'] = L.geoJSON(geojson, {
-      interactive: false,
-      stroke: false,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 1,
-        fillPattern: stripes,
-      },
-    })
+  return L.geoJSON(geojson, {
+    interactive: false,
+    stroke: false,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 1,
+      fillPattern: stripes,
+    },
   })
 }
 
-//* state land overlay
-var loadState = function () {
-  $.getJSON('./data/state-land.min.geojson', function (geojson) {
-    var stripes = new L.StripePattern({
-      height: 2,
-      width: 2,
-      weight: 1,
-      spaceWeight: 1,
-      angle: 30,
-      color: '#FF9C59',
-    })
+//* returns the state land overlay
+const loadState = async () => {
+  const geojson = await fetchGeoJson('./data/state-land.min.geojson')
+  const stripes = new L.StripePattern({
+    height: 2,
+    width: 2,
+    weight: 1,
+    spaceWeight: 1,
+    angle: 30,
+    color: '#FF9C59',
+  })
 
-    stripes.addTo(map)
+  stripes.addTo(map)
 
-    overlays['state'] = L.geoJSON(geojson, {
-      interactive: false,
-      stroke: false,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 1,
-        fillPattern: stripes,
-      },
-    })
+  return L.geoJSON(geojson, {
+    interactive: false,
+    stroke: false,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 1,
+      fillPattern: stripes,
+    },
   })
 }
 
@@ -688,35 +689,151 @@ var loadState = function () {
 //* will be removed once zoning shapefiles are available
 
 
-var loadDHHL = function () {
-  $.getJSON('./data/dhhl-land.geojson', function (geojson) {
-    var stripes = new L.StripePattern({
-      height: 2,
-      width: 2,
-      weight: 1.5,
-      spaceWeight: 1,
-      angle: -45,
-      color: '#FAAE7BC2',
-      spaceColor: '#9cb4dc',
-      opacity: 0.9,
-      spaceOpacity: 0.5,
-    })
-    stripes.addTo(map)
-
-    overlays['DHHL'] = L.geoJSON(geojson, {
-      interactive: true,
-      stroke: true,
-      color: 'rgb(147, 94, 59)',
-      weight: 0.5,
-      pane: 'overlays',
-      style: {
-        fillOpacity: 0.9,
-        fillPattern: stripes,
-      },
-    }).bindTooltip(
-      ' Lands owned by the State of Hawaii Department of Hawaiian Homelands as of October, 2022'
-    )
+const loadDHHL = async () => {
+  const geojson = await fetchGeoJson('./data/dhhl-land.geojson')
+  const stripes = new L.StripePattern({
+    height: 2,
+    width: 2,
+    weight: 1.5,
+    spaceWeight: 1,
+    angle: -45,
+    color: '#FAAE7BC2',
+    spaceColor: '#9cb4dc',
+    opacity: 0.9,
+    spaceOpacity: 0.5,
   })
+  stripes.addTo(map)
+
+  return L.geoJSON(geojson, {
+    interactive: true,
+    stroke: true,
+    color: 'rgb(147, 94, 59)',
+    weight: 0.5,
+    pane: 'overlays',
+    style: {
+      fillOpacity: 0.9,
+      fillPattern: stripes,
+    },
+  }).bindTooltip(
+    ' Lands owned by the State of Hawaii Department of Hawaiian Homelands as of October, 2022'
+  )
+}
+
+// Each overlay checkbox's value, mapped to the function that builds its layer.
+// Nothing downloads until an overlay is turned on for the first time.
+const overlayLoaders = {
+  hydro: loadHydro,
+  federal: loadFederal,
+  state: loadState,
+  DHHL: loadDHHL,
+  transit: loadTransit,
+  house: loadHouse,
+  senate: loadSenate,
+}
+
+// Downloads in progress, by overlay name. Turning an overlay on again while its
+// file is still downloading reuses the same download.
+const overlayDownloads = {}
+const loadingOverlays = new Set()
+let overlayError = ''
+
+const getOverlayCheckbox = (name) =>
+  [...document.querySelectorAll('input[name="Overlay"]')].find(
+    (input) => input.value === name
+  )
+
+// The checkbox's label text, e.g. "Waterways"
+const getOverlayLabel = (name) =>
+  getOverlayCheckbox(name).parentElement.textContent.trim()
+
+/*
+ * Shows what's loading, or the last error, in the status line under the
+ * Overlays heading. It's a live region, so screen readers announce it.
+ */
+const renderOverlayStatus = () => {
+  const status = document.querySelector('#overlayStatus')
+  const loading = [...loadingOverlays].map(getOverlayLabel)
+  status.textContent =
+    overlayError || (loading.length > 0 ? `Loading ${loading.join(', ')}…` : '')
+  status.classList.toggle('statusError', Boolean(overlayError))
+}
+
+/*
+ * Shows an overlay, downloading its file the first time. If the box gets
+ * unchecked while the file downloads, the layer stays off.
+ */
+const showOverlay = async (name) => {
+  const checkbox = getOverlayCheckbox(name)
+  if (!overlays[name]) {
+    loadingOverlays.add(name)
+    renderOverlayStatus()
+    try {
+      overlayDownloads[name] = overlayDownloads[name] || overlayLoaders[name]()
+      overlays[name] = await overlayDownloads[name]
+    } catch (error) {
+      console.error(error)
+      // Forget the failed download, so checking the box again retries it
+      delete overlayDownloads[name]
+      loadingOverlays.delete(name)
+      checkbox.checked = false
+      // Let the rest of the page react as if the box had been unchecked by hand
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+      overlayError = `Couldn't load ${getOverlayLabel(name)}. Check your connection and try again.`
+      renderOverlayStatus()
+      return
+    }
+    loadingOverlays.delete(name)
+    renderOverlayStatus()
+  }
+  if (checkbox.checked && !map.hasLayer(overlays[name])) {
+    overlays[name].addTo(map)
+  }
+}
+
+const hideOverlay = (name) => {
+  // An unchecked overlay that's still downloading no longer counts as loading
+  loadingOverlays.delete(name)
+  if (overlays[name] && map.hasLayer(overlays[name])) {
+    map.removeLayer(overlays[name])
+  }
+}
+
+/*
+ * Shows every checked overlay and hides the rest. Each overlay loads on its
+ * own, so nothing here waits for a download to finish.
+ */
+const syncOverlays = () => {
+  overlayError = ''
+  document.querySelectorAll('input[name="Overlay"]').forEach((checkbox) => {
+    if (checkbox.checked) {
+      showOverlay(checkbox.value)
+    } else {
+      hideOverlay(checkbox.value)
+    }
+  })
+  renderOverlayStatus()
+}
+
+/*
+ * Downloads the county outlines and the zoning districts. The message at the
+ * top of the map says the zones are loading, or that the download failed.
+ */
+const loadMapData = async () => {
+  const status = document.querySelector('#mapStatus')
+  try {
+    const [counties, zones] = await Promise.all([
+      fetchGeoJson('./data/counties.geojson'),
+      fetchGeoJson('./data/final.geojson'),
+    ])
+    loadTowns(counties)
+    loadZones(zones)
+    status.textContent = ''
+  } catch (error) {
+    console.error(error)
+    status.textContent =
+      "Couldn't load the zoning data. Check your connection and reload the page."
+    status.classList.add('statusError')
+  }
 }
 
 // localStorage flag that stops the intro tour from showing again once this
@@ -808,11 +925,8 @@ var initMap = function () {
 
   setFilters()
 
-  // Load town boundaries
-  $.getJSON('./data/counties.geojson', loadTowns)
-
-  // Load main data GeoJSON with zones
-  $.getJSON('./data/final.geojson', loadZones)
+  // Load the county outlines and the zones, with a message while they download
+  loadMapData()
 
   // Add hash
   var hash = new L.Hash(map)
@@ -824,16 +938,9 @@ var initMap = function () {
   map.createPane('overlays')
   map.getPane('overlays').style.zIndex = 501
 
-  // Add overlays
+  // Overlays download the first time they're turned on (see showOverlay)
   // loadKauai()
-  loadDHHL()
-  loadTransit()
-  loadHydro()
-  loadHouse()
-  loadSenate()
   // loadSewer()
-  loadFederal()
-  loadState()
 
   // Add Esri geocoder
   // var searchControl = L.esri.Geocoding.geosearch({
