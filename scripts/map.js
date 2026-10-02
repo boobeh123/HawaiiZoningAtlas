@@ -258,6 +258,15 @@ const setFilters = () => {
     opacityInput.value = String(opacityFromUrl)
   }
 
+  // A link with filters describes the whole form, so start from every box
+  // unchecked. Otherwise a box that starts checked, like House or Senate,
+  // could never be turned off by a link
+  if (params.toString()) {
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = false
+    })
+  }
+
   // Check each box whose name and value both match a pair in the URL
   params.forEach((value, name) => {
     const checkbox = checkboxes.find(
