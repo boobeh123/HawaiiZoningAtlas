@@ -6,33 +6,106 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Data questions from the master spreadsheet (for you to check at the source)
+## Feature 7: Fix the broken filters in the data pipeline (planned, waiting for your approval)
 
-Claude compared `Hawaii Zoning Atlas Master.xlsx` with the CSV the map was built from, and with the GIS files. The spreadsheet itself holds up: for every column that feeds the map, it matches the CSV, apart from rounding and one missing Maui district.
+- [ ] Approve this plan in chat.
+
+**Why:**
+- **Dead checkboxes:** nine sidebar checkboxes never match a single district.
+- **Wrong tooltips:** 135 tooltips claim a minimum home size, but no district has one.
+
+The causes are in the notebook that builds `data/final.geojson`, plus two CSV cells and six GIS district names that don't match the spreadsheet. The details are under "Data questions" below.
+
+**A test run already passed.** A helper agent ran today's notebook, unchanged, on Python 3.13 with current libraries. Compared with the live file:
+- **Attributes:** the same, once the true/false flags are written as `1`/`0` again.
+- **Acreage:** the same.
+- **Shapes:** within about 2 m.
+
+**What will change:**
+1. [data-pipeline/CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb):
+   - **"Allowed Only After Public Hearing":** map the spreadsheet's `Public Hearing` to `AH`, next to the existing `Special Permit` mapping.
+   - **ADU checkboxes:** correct the three column names, so "Allows Renters", "Allows Non-Family/Non-Employees", and "Not Restricted to Primary Structure" get data (`ARent`, `AFam`, `APrim`).
+   - **"No limit" spellings:** a requirement counts only if the cell holds a real value. Blank, `NONE`, `None`, `No`, `N/A`, and `n/a` all mean no limit. That fixes minimum unit size and ADU max size.
+   - **APrim `None`:** read it as `No`. All 48 `None` answers are in districts that allow ADUs, so it means "no restriction".
+   - **Flag formats:** write `ASize` as `Yes`/`No`, which is what the "No Maximum Size Limitation" checkbox sends. The minimum unit size flags stay `1`/`0`, which their checkboxes and the tooltip expect.
+   - **GIS name aliases:** a small table applied before the join. It maps Maui's five `-MRA` names to the spreadsheet's `-WRA` names, and Kauaʻi's `\` to `OS`. The GIS files come from the counties, so their names get mapped in code. The spreadsheet is the team's own, so its errors get fixed at the source (step 2).
+   - **Reading the CSV:** list the blank-cell markers explicitly. Newer pandas reads the text `None` as blank, which would erase the APrim answers.
+   - **Same output on any computer:** sort the GIS files so features always come out in the same order. Select `'str'` columns in the trim step, as pandas 3 asks.
+2. [data-pipeline/hawaii-zoning-data.csv](data-pipeline/hawaii-zoning-data.csv): two cell fixes.
+   - The Maui `P` row gets `HI`, `Maui`, `Maui`.
+   - Kauaʻi `OD/PD` becomes `OS/PD`.
+3. [data-pipeline/requirements.txt](data-pipeline/requirements.txt):
+   - **New pins:** the versions from the test run, which install on Python 3.13: pandas 3.0.6, geopandas 1.2.0, pyogrio 0.13.0, shapely 2.1.2, pyproj 3.8.0.
+   - **Add `nbclient` and `ipykernel`:** then `jupyter execute CombineJurisdictions.ipynb` runs the whole notebook.
+   - **Drop `rtree`:** geopandas no longer uses it, and version 1.0.1 has no Python 3.13 build.
+   - **Keep `flake8`** unless it fails to install.
+4. **Regenerated:** `data-pipeline/final.geojson`, `data-pipeline/final.csv`, and `data/final.geojson`, which is a straight copy, so git stores it once.
+5. [CLAUDE.md](CLAUDE.md): update the Notebook and Data pipeline notes. They cover the pins, the run command, the alias table, the "no limit" rule, and the flag formats. Drop the line saying the pipeline's `final.geojson` is stale.
+
+No changes to `index.html` or `scripts/map.js`: every fix produces the values the checkboxes already send.
+
+**What changes on the map:**
+- **Kauaʻi:** 21 districts that allow 1-family homes only after a public hearing now count when "Allowed Only After Public Hearing" is checked, which it is by default. So Kauaʻi's percentages go up.
+- **Minimum unit size:** no tooltip says "Requires a Minimum Home Size", and the "No Minimum Unit Size Requirement" boxes stop graying districts out.
+- **ADU sub-filters:** they stop graying out the whole map.
+- **Newly joined districts:** 41 Maui polygons (the Wailuku redevelopment districts and Public Use) and two Kauaʻi polygons get their colors and names instead of "Not Zoned". The district count drops from 262 to 261, because `\` merges into `OS`.
+- **Still matches nothing:** "Allowed Only After Public Hearing" under ADUs. That's the data: no county's ADU answer is "Public Hearing".
+- **Invisible side effects:** outlines shift by up to about 2 m, the live file's 2 invalid shapes come out valid, and counties come out in alphabetical order.
+
+**What stays as it is:**
+- **Coordinate precision:** the live file was never rounded. Shrinking it is Feature 9.
+- **Hawaiʻi's agricultural coding:** see the recommendation below.
+
+**How Claude will check it:**
+- **Old file vs. new file:** list every property that changed, and confirm each one traces to a fix above.
+- **Checkbox coverage:** every checkbox name and value in `index.html` should match at least one district, except ADU "Allowed Only After Public Hearing".
+- **Headless Edge, old data vs. new:**
+  - filter counts
+  - Kauaʻi's percentage
+  - tooltips: a Hawaiʻi district without the minimum-size line, and a Maui `-WRA` district with its name
+  - no console errors
+
+**Your follow-up:** make the same two cell fixes in the Google Sheet, so the next export keeps them. Feature 8 depends on it.
+
+---
+
+## Data questions from the master spreadsheet
+
+Claude compared `Hawaii Zoning Atlas Master.xlsx` with the CSV the map was built from, and with the GIS files. The spreadsheet itself holds up: for every column that feeds the map, it matches the CSV, apart from rounding that never changes a lot-size bucket.
 
 The odd numbers come from three other places:
-1. **A methodology choice** about farm dwellings, recorded in the **Discrepancies** tab.
+1. **A methodology choice** about farm dwellings, recorded in the Hawaiʻi agricultural rows' Special Notes and in the **Discrepancies** tab.
 2. **Pipeline mapping bugs**, which are fixable in Feature 7.
 3. **District names that differ between the GIS files and the spreadsheet.** Those districts show as "Not Zoned".
 
-These need the source zoning code or your data-entry files:
+One decision for you:
 
-- [ ] **Hawaiʻi County agricultural districts** (A-1a … A-200a): every row says 1-family *Prohibited* but ADU *Allowed*.
-  - **The researchers' rule:** the Discrepancies tab says farm dwellings aren't counted as 1-family housing.
-  - **What to check:** does Hawaiʻi County's code also allow ordinary single-family dwellings there? If so, 1-family should be *Allowed/Conditional*.
+- [ ] **Hawaiʻi County agricultural districts** (A-1a … A-8000a): every row says 1-family *Prohibited* but ADU *Allowed*. **Claude checked the code: this is a deliberate choice, not a typo.**
   - **Why it matters:** these districts are most of the county's zoned land, which is where "1-family allowed on only 2.7%" comes from.
-- [ ] **Maui `-MRA` vs. `-WRA`:** confirm that the GIS districts `CMU-MRA`, `BMF-MRA`, `RES-MRA`, `MF-MRA`, and `P/QP-MRA` are the spreadsheet's `CMU-WRA` … `P/QP-WRA` (Wailuku Redevelopment Area). Together they're about 35 polygons, all showing as "Not Zoned" today.
-- [ ] **Maui `PR` (25 polygons) and `DR` (10 polygons)** are in the GIS but have no spreadsheet row. What districts are they? The spreadsheet has `PD` (Project District) and the named PDs, but nothing called `PR` or `DR`.
-- [ ] **Maui `BRW`, `UZR`, and `NZ`:** confirm these are unzoned (breakwater, unzoned, no zoning).
-- [ ] **Kauaʻi `OD/PD`:** the spreadsheet row is named "Open Space/Project District", so it's probably a typo for `OS/PD`, which is what the GIS uses.
-- [ ] **Kauaʻi GIS polygon named `\`:** what district should it be?
+  - **The county code allows a house** (chapter 25, January 2026 edition; the county site blocks scripts, so Claude read [an archived copy](http://web.archive.org/web/20260902090202/https://www.hawaiicounty.gov/home/showdocument?id=302520)):
+    - **§25-5-72(a)(11)** permits "Dwelling, single-family, as permitted under chapter 205, Hawai‘i Revised Statutes and as permitted under section 25-5-77(b)."
+    - **§25-5-77(b):** "One single-family dwelling or one farm dwelling shall be permitted on any building site in the A district."
+    - **§25-5-77(d)** allows an ADU on any A-district building site, which matches the spreadsheet's ADU *Allowed*.
+  - **But state law narrows it.** On State Agricultural land rated class A or B, [HRS §205-4.5](http://web.archive.org/web/20250311033538/https://www.capitol.hawaii.gov/hrscurrent/vol04_ch0201-0257/hrs0205/HRS_0205-0004_0005.htm) permits "farm dwellings", meaning "a single-family dwelling located on and accessory to a farm". Apart from special permits, it allows ordinary houses only on lots that existed before June 4, 1976.
+  - **The researchers' reasoning,** from the A-100a row's Special Notes: "All dwellings, including the primary dwelling, must be occupied by people who will operate the agricultural enterprise." The atlas doesn't count housing limited to certain occupants as 1-family. The Discrepancies tab applies the same rule to Honolulu's farm dwellings and caretaker units.
+  - **Claude's recommendation:** keep the researchers' coding. Changing it would override the team's documented method. The real gap is that the map never explains it: the tooltip shows Tooltip Notes, and those are empty. Showing the Special Notes could be its own small feature.
+
+**Resolved by Claude from the GIS files' own descriptions** (Maui's `zone_class` column and Kauaʻi's `Full District Name`):
+- [x] **Maui `-MRA`:** the GIS describes these as "Commercial Mixed Use - MRA", "Business Multi Family - MRA", and so on, which match the spreadsheet's `-WRA` rows one for one. That's 35 polygons, so this is a naming fix.
+- [x] **Maui `PR` = Proposed Road (25 polygons) and `DR` = Drainage (10):** not zoning districts. "Not Zoned" is correct.
+- [x] **Maui `BRW` = Beach Right-of-Way, `UZR` = Unzoned Road, `NZ` = Not Zoned:** correctly unzoned.
+- [x] **Kauaʻi `OS/PD`:** the GIS calls it "Open Space/Project District", and so does the spreadsheet's `OD/PD` row, so the sheet's abbreviation is a typo.
+- [x] **Kauaʻi polygon `\`:** the GIS calls it "Open Space", so it's a typo for `OS`.
 
 **Fixable without new research** (this becomes part of Feature 7):
-- **Maui `P` (Public Use)** is in the master but missing from the CSV, so 6 polygons show as "Not Zoned". Refreshing the CSV from the master fixes it.
+- **Maui `P` (Public Use):** the row exists in both the master and the CSV, but its State, Jurisdiction, and County cells are blank, so its 6 polygons can't join and show as "Not Zoned". The fix is filling in `HI`, `Maui`, `Maui`. *(Correction: Claude first reported it as missing from the CSV.)*
 - **"Public Hearing" is the value the researchers used**, and no row says "Special Permit". The pipeline only maps "Special Permit", which is why "Allowed Only After Public Hearing" matches nothing.
 - **The three ADU occupancy columns** exist as "ADU Renter Occupancy Prohibited", "ADU Employee or Family Occupancy Required", and "ADU Restricted to Only Primary Structure …". The notebook looks for different names, so it drops them.
-- **ADU max size writes "no limit" five ways:** blank, `N/A`, `NONE`, `None`, `No`. The pipeline counts every non-blank value, including `NONE`, as having a limit.
+- **"No limit" is written several ways:** blank, `N/A`, `n/a`, `NONE`, `None`, `No`. The workbook's Conventions tab defines `NONE` as "I checked and there is no limit". The pipeline counts every non-blank value as a requirement, which breaks two things:
+  - **ADU max size:** most "has a size limit" flags are false.
+  - **Minimum unit size:** the CSV has no actual minimum unit size anywhere, yet 135 districts are flagged as having one, including 90 of Hawaiʻi County's 108. Their tooltips wrongly say "Requires a Minimum Home Size", and the "no minimum unit size" filters gray them out.
 - **Tooltip Notes are empty in every county,** which is why no tooltip ever shows a note. **Special Notes** are filled in for some districts, for example the farm-dwelling note on Hawaiʻi County's agricultural rows. Showing those instead would be a content decision for you.
+- **The Master's numbers match the CSV:** across 908 lot-size cells, the rounding differences never move a district into a different lot-size bucket. So the CSV doesn't need re-exporting.
 
 **Checked and correct:** Honolulu's 3-family-but-not-1-family districts are real zoning, not errors: BMX-4 downtown, Kakaʻako Mixed Use, and Waikīkī Resort Mixed Use allow apartments but not detached houses.
 
@@ -40,7 +113,7 @@ These need the source zoning code or your data-entry files:
 
 ---
 
-## Feature 5: Label the House and Senate districts (built, not committed yet)
+## Feature 5: Label the House and Senate districts (built and committed)
 
 - [x] Plan approved in chat (2026-10-01). You chose labels like "House 23" over "H23".
 
@@ -149,8 +222,8 @@ These need the source zoning code or your data-entry files:
 - **Claude's check:** on `127.0.0.1`, all 60 tiles carried the localhost key. On a production-like hostname, all 60 carried the production key. No watermarks, no errors.
 - **Heads-up:** both keys still return real tiles when a request claims to come from `example.com`, so CARTO isn't enforcing the restrictions yet. They may still be taking effect. Recheck the dashboard later.
 
-- [ ] On localhost, open DevTools → **Network** and filter for `cartocdn`. The tile URLs contain `key=cb1_476c_1_`.
-- [ ] After you push, do the same on the live site. The tile URLs contain `key=cb1_476c_2_`.
+- [X] On localhost, open DevTools → **Network** and filter for `cartocdn`. The tile URLs contain `key=cb1_476c_1_`.
+- [X] After you push, do the same on the live site. The tile URLs contain `key=cb1_476c_2_`.
 
 ---
 
@@ -216,13 +289,13 @@ These need the source zoning code or your data-entry files:
 - **Production:** on a fake production hostname pointed at the test server, the page requests `gtag.js` with `G-ZTZX623WY7` and queues the `js` and `config` commands.
 - **Features 1 and 2:** unchanged. The tooltip and county panel are pixel-identical, the URL round trip works, and the quote-in-name bad link still loads cleanly.
 
-- [ ] Press Ctrl+U to view the page source. Several `<script>` tags in the `<head>` is fine. Each one should have a `src="…"` and nothing between its opening and closing tags. A `<script>` with code written between its tags is an inline script, and there should be none. `scripts/analytics.js` loads with `defer`.
-- [ ] On localhost, open DevTools → **Network**, reload, and filter for `googletagmanager`. Nothing shows up. (`fonts.googleapis.com` is expected. That's Google Fonts serving the icons.)
+- [X] Press Ctrl+U to view the page source. Several `<script>` tags in the `<head>` is fine. Each one should have a `src="…"` and nothing between its opening and closing tags. A `<script>` with code written between its tags is an inline script, and there should be none. `scripts/analytics.js` loads with `defer`.
+- [X] On localhost, open DevTools → **Network**, reload, and filter for `googletagmanager`. Nothing shows up. (`fonts.googleapis.com` is expected. That's Google Fonts serving the icons.)
 - [X] In the console, run `zonesLayer.getLayers().length`. It returns `262`.
 - [X] In the console, run `window.dataLayer`. It's an empty array (`[]`), because Analytics is skipped locally.
-- [ ] On the live site, open DevTools → **Network** first, then reload. Requests made before DevTools opened aren't listed.
-  - Filter for `gtag`. You should see a `gtag/js?id=G-ZTZX623WY7` request.
-  - Filter for `collect`. You should see a request to Google Analytics.
+- [X] On the live site, open DevTools → **Network** first, then reload. Requests made before DevTools opened aren't listed.
+  - Filter for `gtag`. You should see a `gtag/js?id=G-ZTZX623WY7` request. 
+  - Filter for `collect`. You should see a request to Google Analytics. 
   - If neither shows up, an ad blocker or your browser's tracking prevention may be stopping them. Try an InPrivate window with extensions turned off.
   - Claude's live check on 2026-10-01 saw the `gtag.js` request.
 
@@ -256,22 +329,22 @@ This fixes review items #3 and #10.
 
 **What "cleans itself up" looks like:** a few seconds after the page loads, everything after the third `/` is rewritten to what was actually restored. For most links below that's `townActive=&opacity=90`, meaning no county is selected and opacity is at its default. The map numbers before it (`#9/20.4/-157.4`) may also round a little, for example to `#9/20.4013/-157.4011`.
 
-- [ ] [Quote and bracket in a name](http://localhost:8000/#9/20.4/-157.4/1F%22%5Dx=A).
+- [X] [Quote and bracket in a name](http://localhost:8000/#9/20.4/-157.4/1F%22%5Dx=A).
   - Before: the map never loaded (selector error).
   - Now: it loads, and the filter part of the URL becomes `townActive=&opacity=90`.
-- [ ] [Broken `%` sequence](http://localhost:8000/#9/20.4/-157.4/opacity=%E0%A4%A).
+- [X] [Broken `%` sequence](http://localhost:8000/#9/20.4/-157.4/opacity=%E0%A4%A).
   - Before: the map never loaded (`URIError`).
   - Now: it loads with the default opacity of 90, and the URL ends in `/townActive=&opacity=90`.
-- [ ] [Unknown county](http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere).
+- [X] [Unknown county](http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere).
   - Before: the bogus county stayed in the URL.
   - Now: it's cleared, so the URL ends in `/townActive=&opacity=90`. `townActive=` with nothing after it means no county is selected.
 - [X] [County with no zoning data](http://localhost:8000/#9/20.4/-157.4/townActive=Kalawao).
   - Before: Kalawao was outlined in yellow as if selected.
   - Now: no outline, and the county is cleared.
-- [ ] [Opacity out of range](http://localhost:8000/#9/20.4/-157.4/opacity=9999).
+- [X] [Opacity out of range](http://localhost:8000/#9/20.4/-157.4/opacity=9999).
   - Before: the slider jumped to 100.
   - Now: the slider stays at the default of 90, and the URL ends in `/townActive=&opacity=90`.
-- [ ] [A value no checkbox has](http://localhost:8000/#9/20.4/-157.4/1MLS=Z).
+- [X] [A value no checkbox has](http://localhost:8000/#9/20.4/-157.4/1MLS=Z).
   - Before: it stayed in the URL.
   - Now: it's dropped, meaning `1MLS=Z` disappears from the URL. The URL ends in `/townActive=&opacity=90`.
 - [X] [Good and bad values mixed](http://localhost:8000/#9/20.4/-157.4/townActive=Honolulu&1F=&1F=A&opacity=50&bogus=1&1MLS=Z).
