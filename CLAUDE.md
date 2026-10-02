@@ -34,7 +34,15 @@ pip install -r requirements.txt   # petl, black
 python validation.py              # prints "Success!" or raises "Invalid Data"
 ```
 
-**Notebook.** Run `data-pipeline/CombineJurisdictions.ipynb` from `data-pipeline/`; `HOME_DIRECTORY` defaults to `.`. The manually triggered `hza-data-notebook.yml` action runs it through papermill and sets `HOME_DIRECTORY` from `.github/params.json`. The pins in `data-pipeline/requirements.txt` (pandas 1.4.3, geopandas 0.11.1) need Python ≤ 3.10. Jupyter and papermill aren't listed there, so install them separately.
+**Notebook.** Run it from `data-pipeline/`. The pins in `requirements.txt` were tested on Python 3.13.
+
+```sh
+pip install -r requirements.txt
+jupyter execute CombineJurisdictions.ipynb   # about a minute; writes final.geojson and final.csv here
+cp final.geojson ../data/final.geojson       # the site reads data/final.geojson
+```
+
+`jupyter execute` doesn't show cell output, and `read_zoning_file()` swallows load errors. So after a run, count the `T` values (see Inspecting data) to confirm all four counties are there. `HOME_DIRECTORY` defaults to `.`. The manually triggered `hza-data-notebook.yml` action runs the notebook through papermill and sets `HOME_DIRECTORY` from `.github/params.json`.
 
 **Python tooling.** `black` is pinned in `csv-validation/requirements.txt` and `flake8` in `data-pipeline/requirements.txt`. The code uses black's 4-space indent, which contradicts the 2 spaces set in `.pylintrc`.
 
@@ -93,14 +101,21 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 ## Data pipeline (spreadsheet → `data/final.geojson`)
 
 1. **Source.** A Google Sheet with one tab per county. `spreadsheet.yml` (daily cron) pulls and merges the tabs and commits `data/hawaii-zoning-data.csv`. Nothing reads that copy. The pipeline's real input is `data-pipeline/hawaii-zoning-data.csv`, which is updated by hand.
-2. **Two header rows.** The CSV starts with a row of section numbers, then the column names. The notebook reads it with `skiprows=1`.
-3. **GIS input.** The notebook reads every `data-pipeline/gis/*.gpkg`. Each needs `State`, `Jurisdiction`, `AbbreviatedDistrict`, and geometry; the README's mention of `FullDistrictName` is outdated. A file that fails to load only prints "Error when reading …", and its county silently drops out of the output.
-4. **Join.** `create_id()` links GIS features to spreadsheet rows on `HI--<JURISDICTION>--<DISTRICT>`, uppercased, with `-` and spaces stripped from the district. A district that doesn't match ends up with null attributes.
+2. **Reading the CSV.**
+   - **Two header rows:** the CSV starts with a row of section numbers, then the column names. The notebook reads it with `skiprows=1`.
+   - **Blank cells:** the CSV is read with an explicit `blank_values` list, pandas' usual list without `None`. Newer pandas reads the text `None` as blank, but the researchers use it as an answer.
+   - **"No limit" answers:** `has_requirement()` counts a size limit only when the cell holds a real value. Blank, `NONE`, `None`, `No`, `N/A`, and `n/a` all mean no limit. The master sheet's Conventions tab defines `NONE` as "I checked and there is no limit".
+3. **GIS input.** The notebook reads every `data-pipeline/gis/*.gpkg`, sorted, so features come out in the same order on any machine.
+   - **Columns:** each file needs `State`, `Jurisdiction`, `AbbreviatedDistrict`, and geometry. The README's mention of `FullDistrictName` is outdated.
+   - **Load errors:** a file that fails to load only prints "Error when reading …", and its county silently drops out of the output.
+   - **Name aliases:** `gis_district_aliases` maps GIS names that differ from the spreadsheet's before the join: Maui's `-MRA` districts to the sheet's `-WRA`, and Kauai's `\` to `OS`. The GIS files come from the counties, so their names get mapped in code. Fix spreadsheet typos in the CSV itself, and in the Google Sheet so the next export keeps them.
+4. **Join.** `create_id()` links GIS features to spreadsheet rows on `HI--<JURISDICTION>--<DISTRICT>`, uppercased, with `-` and spaces stripped from the district. A district that doesn't match ends up with null attributes, and the map draws it as Not Zoned.
 5. **Acreage.** Areas are computed in EPSG:6933. Federal/state land (`federal-state-dissolve.geojson`) is subtracted to get `MunicipalAcres`, which becomes `MA`.
 6. **Output.**
-   - `cols_xwalk` renames the columns and `vals_xwalk` shortens the values (`Allowed/Conditional`→`A`, `Primarily Residential`→`R`, …). Any `cols_xwalk` column the CSV lacks is silently dropped.
-   - The notebook writes `data-pipeline/final.geojson`, but the site reads `data/final.geojson`, so copy the file across by hand. The action doesn't commit anything.
-   - The committed `data-pipeline/final.geojson` is stale and has no Kauai.
+   - **Shortened names and values:** `cols_xwalk` renames the columns and `vals_xwalk` shortens the values (`Allowed/Conditional`→`A`, `Public Hearing`→`AH`, `Primarily Residential`→`R`, …). Any `cols_xwalk` column the CSV lacks is silently dropped, which is how the ADU filters once broke.
+   - **Flag formats:** the save cell writes the true/false flags as the text the checkboxes send. The minimum unit size flags (`1MUS`…`4MUS`, `MUS`) become `'1'`/`'0'`, and `ASize` becomes `'Yes'`/`'No'`. Without that, pyogrio writes `'True'`/`'False'`, which breaks those filters and the tooltip's minimum-size line.
+   - **Two copies:** the notebook writes `data-pipeline/final.geojson`, but the site reads `data/final.geojson`, so copy the file across by hand. The two should be identical. The action doesn't commit anything.
+   - **CSV location:** `final.csv` is written to the working directory, not `HOME_DIRECTORY`.
 
 ## Inspecting data
 
