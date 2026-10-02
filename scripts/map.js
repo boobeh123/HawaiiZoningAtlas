@@ -92,16 +92,43 @@ var style = function (filters, feature) {
   }
 }
 
-var updateUrl = function () {
-  var mapLocationHash = location.hash.split('/').slice(0, 3).join('/')
+/*
+ * Returns the filter part of the URL hash (everything after #zoom/lat/lng/).
+ * URLSearchParams decodes it once and never throws on a malformed link.
+ */
+const getUrlFilterParams = () =>
+  new URLSearchParams(location.hash.split('/').slice(3).join('/'))
+
+/*
+ * Returns the sidebar form's current state in the same format jQuery's
+ * serialize() produced, so links shared before this change keep working
+ */
+const getFormParams = () =>
+  new URLSearchParams(new FormData(document.querySelector('#form')))
+
+const updateUrl = () => {
+  const mapLocationHash = location.hash.split('/').slice(0, 3).join('/')
   // Update URL
-  location.replace(mapLocationHash + '/' + $('#form').serialize())
+  location.replace(`${mapLocationHash}/${getFormParams()}`)
 }
 
 /**
  * Loads the main GeoJSON data file
  */
 var loadZones = function (geojson) {
+  // A county from the URL only counts if it has zoning data. Kalawao, for
+  // example, has a county outline but no zones.
+  const zoneTowns = new Set(
+    geojson.features.map((feature) => feature.properties[zTown])
+  )
+  if (townActive && !zoneTowns.has(townActive)) {
+    townActive = ''
+    document.querySelector('#form input[name="townActive"]').value = ''
+    if (towns) {
+      towns.setStyle(townStyle)
+    }
+  }
+
   var filters = getFilters()
 
   dataLayer = L.geoJSON(geojson, {
@@ -205,38 +232,51 @@ var loadZones = function (geojson) {
   })
 
   calculateActiveArea()
+
+  // If the link carried filters, rewrite it from what was actually restored,
+  // so values that matched nothing drop out of the URL
+  if (getUrlFilterParams().toString()) {
+    updateUrl()
+  }
 }
 
 /*
- * On page loads, sets filters based on the URL
+ * On page load, sets filters from the URL. Only values that match a real
+ * input are used, and URL text is only ever compared, never turned into a
+ * selector.
  */
-var setFilters = function () {
-  var filters = $.unserialize(location.hash.split('/').slice(3).join('/'))
+const setFilters = () => {
+  const form = document.querySelector('#form')
+  const checkboxes = [...form.querySelectorAll('input[type="checkbox"]')]
+  const opacityInput = form.querySelector('input[name="opacity"]')
+  const params = getUrlFilterParams()
 
-  if (filters['townActive']) {
-    townActive = filters['townActive']
-    $('input[name="townActive"').val(townActive)
+  // Checked against the zoning data once it loads (see loadZones)
+  const townFromUrl = params.get('townActive')
+  if (townFromUrl) {
+    townActive = townFromUrl
+    form.querySelector('input[name="townActive"]').value = townFromUrl
   }
 
-  for (var filter in filters) {
-    var value = filters[filter]
+  // Only a whole number within the slider's range replaces the default
+  const opacityFromUrl = Number(params.get('opacity'))
+  if (
+    Number.isInteger(opacityFromUrl) &&
+    opacityFromUrl >= Number(opacityInput.min) &&
+    opacityFromUrl <= Number(opacityInput.max)
+  ) {
+    opacityInput.value = String(opacityFromUrl)
+  }
 
-    if (filter === 'opacity') {
-      $('input[name="' + filter + '"]').val(value)
-    } else if (typeof value === 'string') {
-      $('input[name="' + filter + '"][value="' + value + '"]').prop(
-        'checked',
-        true
-      )
-    } else {
-      for (var i in value) {
-        $('input[name="' + filter + '"][value="' + value[i] + '"]').prop(
-          'checked',
-          true
-        )
-      }
+  // Check each box whose name and value both match a pair in the URL
+  params.forEach((value, name) => {
+    const checkbox = checkboxes.find(
+      (input) => input.name === name && input.value === value
+    )
+    if (checkbox) {
+      checkbox.checked = true
     }
-  }
+  })
 
   $('input.main-in-group:checked')
     .parents()
