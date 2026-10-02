@@ -6,7 +6,31 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 2: URL state with `URLSearchParams` (built, not committed yet)
+## Feature 3: Move Google Analytics into its own file (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-01). You chose (c): keep the org's ID, `G-ZTZX623WY7`.
+
+**What changed:**
+- **New [scripts/analytics.js](scripts/analytics.js):** holds the Analytics setup with the org's ID. It skips Analytics on `localhost` and `127.0.0.1`. Everywhere else it loads `gtag.js` and sends the same `js` and `config` commands as before.
+- **[index.html](index.html):** the inline script and the `gtag.js` tag are replaced by `<script src="scripts/analytics.js" defer></script>`. The page has no inline scripts now (#4).
+- **[scripts/map.js](scripts/map.js):** the zoning layer is now called `zonesLayer` instead of `dataLayer`, so it no longer overwrites Analytics' queue.
+- **[CLAUDE.md](CLAUDE.md):** updated the notes on script loading, county selection, and URL state, and added a note on rendering data as text. The URL-state note had been out of date since Feature 2.
+
+**Claude's checks** (headless Edge, old code vs. new, with Google's servers blocked so no hits were sent; all passed):
+- **The collision:** before, once the zones loaded, `window.dataLayer` was the map layer and `gtag()` threw `dataLayer.push is not a function`. After, it stays Analytics' queue and `gtag()` works.
+- **Inline scripts and localhost:** before, there was one inline script, and Analytics loaded on localhost too. After, there are no inline scripts, and on localhost nothing goes to Google.
+- **Production:** on a fake production hostname pointed at the test server, the page requests `gtag.js` with `G-ZTZX623WY7` and queues the `js` and `config` commands.
+- **Features 1 and 2:** unchanged. The tooltip and county panel are pixel-identical, the URL round trip works, and the quote-in-name bad link still loads cleanly.
+
+- [ ] Press Ctrl+U to view the page source. There's no inline `<script>` block, and `scripts/analytics.js` loads with `defer`.
+- [ ] On localhost, open DevTools → **Network**, reload, and filter for `google`. Nothing shows up.
+- [ ] In the console, run `zonesLayer.getLayers().length`. It returns `262`.
+- [ ] In the console, run `window.dataLayer`. It's an empty array (`[]`), because Analytics is skipped locally.
+- [ ] After you deploy, open the live site's **Network** tab. It shows a `gtag/js?id=G-ZTZX623WY7` request and a `collect` request to Google Analytics.
+
+---
+
+## Feature 2: URL state with `URLSearchParams` (built and committed)
 
 - [x] Plan approved in chat (2026-10-01).
 
@@ -69,7 +93,7 @@ This fixes review items #3 and #10.
 - [ ] Click a zone. The panel shows the acreage sentence and three stats: HH Income, Native Hawaiian, Cost-Burdened.
 - [ ] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)".
 - [ ] Turn on **Transit Stations (Rail)** and click a station marker. Its name appears.
-- [ ] In the DevTools console, run `dataLayer.eachLayer((l) => { l.feature.properties.Z = '<img src=x onerror=alert(1)>' })`, then hover over a zone. The tooltip shows that text exactly as typed, and no alert pops up. Reload the page afterwards.
+- [ ] In the DevTools console, run `zonesLayer.eachLayer((l) => { l.feature.properties.Z = '<img src=x onerror=alert(1)>' })`, then hover over a zone. The tooltip shows that text exactly as typed, and no alert pops up. Reload the page afterwards. (Before Feature 3, this variable was called `dataLayer`.)
 - [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. The map loads, no panel appears, and the console shows no red errors.
 
 **Expected console noise:** one yellow warning, "Deprecated include of L.Mixin.Events". It comes from the vendored [leaflet-pattern.js](scripts/leaflet-pattern.js) and was already there before Feature 1.
