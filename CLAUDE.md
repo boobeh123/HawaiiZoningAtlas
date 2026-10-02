@@ -58,7 +58,13 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - It also holds vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize, which nothing calls anymore.
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
-- **Data loading.** `initMap()` fetches `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). Each `loadX()` overlay function fetches its own file and fills `overlays[key]` asynchronously.
+- **Data loading.** `initMap()` calls `loadMapData()`, which uses `fetch` to get `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). `#mapStatus` shows "Loading zoning data…" until the zones arrive, or an error if they don't.
+- **Overlays load on first toggle.**
+  - **The loaders:** `overlayLoaders` maps each Overlay checkbox `value` to an async `loadX()`. Each loader fetches its file and returns a Leaflet layer.
+  - **Turning overlays on and off:** `syncOverlays()` runs on every form change and after a link is restored, and it calls `showOverlay()` or `hideOverlay()`.
+  - **Downloads:** each overlay downloads once and is cached in `overlays`. It's only added to the map if its box is still checked when the file arrives.
+  - **Messages:** `#overlayStatus`, a live region, shows loading and error text.
+  - **Exception:** `loadSewer()` is still in the old style, and nothing calls it.
 - **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()` and `calculateActiveArea()` do. Never build it from HTML strings.
 - **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
