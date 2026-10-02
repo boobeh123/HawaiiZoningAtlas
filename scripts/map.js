@@ -564,11 +564,162 @@ const loadHydro = async () => {
 }
 
 /*
- * Returns the non-interactive House district boundaries layer
+ * Area and centroid of a ring of [lng, lat] points. Flat math is accurate
+ * enough at the size of a district.
+ */
+const getRingCentroid = (ring) => {
+  let twiceArea = 0
+  let x = 0
+  let y = 0
+  ring.forEach(([x1, y1], i) => {
+    const [x2, y2] = ring[(i + 1) % ring.length]
+    const cross = x1 * y2 - x2 * y1
+    twiceArea += cross
+    x += (x1 + x2) * cross
+    y += (y1 + y2) * cross
+  })
+  return {
+    area: Math.abs(twiceArea) / 2,
+    point: [x / (3 * twiceArea), y / (3 * twiceArea)],
+  }
+}
+
+// Whether [x, y] is inside the ring: a ray from the point crosses its edges
+// an odd number of times
+const isInsideRing = ([x, y], ring) =>
+  ring.reduce((inside, [x1, y1], i) => {
+    const [x2, y2] = ring[(i + 1) % ring.length]
+    const crosses =
+      y1 > y !== y2 > y && x < ((x2 - x1) * (y - y1)) / (y2 - y1) + x1
+    return crosses ? !inside : inside
+  }, false)
+
+/*
+ * The middle of the widest stretch of the ring along the line at latitude y.
+ * Used when a shape is so curved that its centroid falls outside it.
+ */
+const getWidestMidpoint = (ring, y) => {
+  const crossings = ring
+    .map(([x1, y1], i) => {
+      const [x2, y2] = ring[(i + 1) % ring.length]
+      return y1 > y !== y2 > y ? x1 + ((y - y1) * (x2 - x1)) / (y2 - y1) : null
+    })
+    .filter((x) => x !== null)
+    .sort((a, b) => a - b)
+  // Crossings pair up into stretches that are inside the shape
+  const stretches = crossings
+    .filter((_, i) => i % 2 === 0)
+    .map((start, i) => [start, crossings[i * 2 + 1]])
+  const [start, end] = stretches.reduce((widest, stretch) =>
+    stretch[1] - stretch[0] > widest[1] - widest[0] ? stretch : widest
+  )
+  return (start + end) / 2
+}
+
+/*
+ * Where a district's label goes: the centroid of its largest piece, or the
+ * widest-stretch fallback when the centroid falls outside that piece. Also
+ * returns that piece's bounds, used to decide whether the label has room.
+ */
+const getLabelPlacement = (geometry) => {
+  const polygons =
+    geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates
+  // Outer rings only: none of the district shapes have holes
+  const pieces = polygons.map((polygon) => ({
+    ring: polygon[0],
+    ...getRingCentroid(polygon[0]),
+  }))
+  const largest = pieces.reduce((best, piece) =>
+    piece.area > best.area ? piece : best
+  )
+  const [x, y] = largest.point
+  const lng = isInsideRing([x, y], largest.ring)
+    ? x
+    : getWidestMidpoint(largest.ring, y)
+  return {
+    latLng: L.latLng(y, lng),
+    bounds: L.latLngBounds(largest.ring.map(([ringLng, ringLat]) => [ringLat, ringLng])),
+    area: largest.area,
+  }
+}
+
+// Every district label that's been created, largest district first
+const districtLabels = []
+
+// Whether two screen rectangles overlap, counting a small gap as overlap
+const rectsOverlap = (a, b, gap = 2) =>
+  a.left < b.right + gap &&
+  b.left < a.right + gap &&
+  a.top < b.bottom + gap &&
+  b.top < a.bottom + gap
+
+/*
+ * Shows each label only where it has room: its district must be wider and
+ * taller on screen than the label, and the label can't overlap one that's
+ * already shown. Larger districts go first. Runs after every zoom, and
+ * whenever a district overlay is turned on or off.
+ */
+const updateDistrictLabels = () => {
+  const placed = []
+  districtLabels
+    .filter(({ tooltip }) => map.hasLayer(tooltip))
+    // Measure every label before changing any. Hidden labels keep their size
+    // (visibility: hidden), so they can be measured where they stand.
+    .map((label) => ({
+      ...label,
+      rect: label.tooltip.getElement().getBoundingClientRect(),
+    }))
+    .forEach(({ tooltip, bounds, rect }) => {
+      const northWest = map.latLngToContainerPoint(bounds.getNorthWest())
+      const southEast = map.latLngToContainerPoint(bounds.getSouthEast())
+      const hasRoom =
+        southEast.x - northWest.x >= rect.width &&
+        southEast.y - northWest.y >= rect.height
+      const show =
+        hasRoom && !placed.some((other) => rectsOverlap(rect, other))
+      if (show) {
+        placed.push(rect)
+      }
+      tooltip.getElement().classList.toggle('districtLabelHidden', !show)
+    })
+}
+
+/*
+ * Returns a layer group with the district lines and a label for each
+ * district. Labels are Leaflet tooltips, which ignore the mouse, so clicks
+ * still reach the zones underneath.
+ */
+const buildDistrictOverlay = (lines, getLabelText, className) => {
+  const labels = lines.getLayers().map((district) => {
+    const placement = getLabelPlacement(district.feature.geometry)
+    const tooltip = L.tooltip({
+      // Without permanent, Leaflet closes the label on the next map click in
+      // any browser with touch or pointer events (all modern ones)
+      permanent: true,
+      direction: 'center',
+      opacity: 1,
+      className: `districtLabel ${className}`,
+    })
+      .setLatLng(placement.latLng)
+      .setContent(
+        createTextElement('span', getLabelText(district.feature.properties))
+      )
+    return { tooltip, bounds: placement.bounds, area: placement.area }
+  })
+  districtLabels.push(...labels)
+  districtLabels.sort((a, b) => b.area - a.area)
+
+  const overlay = L.layerGroup([lines, ...labels.map(({ tooltip }) => tooltip)])
+  overlay.on('add remove', updateDistrictLabels)
+  return overlay
+}
+
+/*
+ * Returns the House district lines with a "House 23"-style label on each
  */
 const loadHouse = async () => {
   const geojson = await fetchGeoJson('./data/house-districts.min.geojson')
-  const houseLayer = L.geoJSON(geojson, {
+  const lines = L.geoJSON(geojson, {
     interactive: false,
     stroke: true,
     color: '#E06AAA',
@@ -578,21 +729,19 @@ const loadHouse = async () => {
       fillOpacity: 0,
     },
   })
-
-  houseLayer.eachLayer(function (layer) {
-    layer.bindPopup(
-      document.createTextNode(layer.feature.properties.state_house)
-    )
-  })
-  return houseLayer
+  return buildDistrictOverlay(
+    lines,
+    (properties) => `House ${properties.house_id}`,
+    'houseLabel'
+  )
 }
 
 /*
- * Returns the non-interactive Senate district boundaries layer
+ * Returns the Senate district lines with a "Senate 12"-style label on each
  */
 const loadSenate = async () => {
   const geojson = await fetchGeoJson('./data/senate-districts.min.geojson')
-  const senateLayer = L.geoJSON(geojson, {
+  const lines = L.geoJSON(geojson, {
     interactive: false,
     stroke: true,
     color: '#F8F807',
@@ -602,12 +751,11 @@ const loadSenate = async () => {
       fillOpacity: 0,
     },
   })
-  senateLayer.eachLayer(function (layer) {
-    layer.bindPopup(
-      document.createTextNode(layer.feature.properties.state_senate)
-    )
-  })
-  return senateLayer
+  return buildDistrictOverlay(
+    lines,
+    (properties) => `Senate ${properties.senate_id}`,
+    'senateLabel'
+  )
 }
 
 // todo: add sewerlines overlay (oahu is done - need to do neighbor islands)
@@ -869,6 +1017,9 @@ var initMap = function () {
   }).setView([20.4162, -157.4015], 9)
 
   L.control.zoom({ position: 'topright' }).addTo(map)
+
+  // District labels show or hide depending on how much room they have
+  map.on('zoomend', updateDistrictLabels)
 
   // CARTO basemap keys. They're public by design (they ride along on every
   // tile request), so they live here instead of .env. Each one is limited to
