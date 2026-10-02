@@ -6,7 +6,68 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 7: Fix the broken filters in the data pipeline (built, not committed yet)
+## Mobile layout (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-02).
+
+**What changed:**
+- [style.css](style.css):
+  - **Variables:** `--phoneMapHeight`, `--phoneGap`, and `--zoomButtonsClearance` on `:root`.
+  - **A Media queries block** at the bottom, in your comment format. It replaces the rule that hid the sidebar on phones.
+    - **Phones (600px and narrower):** the map takes the top 55% of the screen, and the sidebar is a scrolling panel underneath.
+    - **The area panel on phones:** it spans the top of the map, clear of the zoom buttons.
+    - **Map credits on phones:** smaller.
+    - **The tour on phones:** popovers sit across the top of the screen without the arrow, and scroll when they're long.
+    - **Tablets and phones held sideways (601–1139px):** the area panel sits beside the sidebar.
+    - **Your reduced-motion rule.**
+- [scripts/map.js](scripts/map.js): `initMap()` starts phones at zoom 6 instead of 9. A link still opens at its own view.
+
+No HTML changes.
+
+**Claude's checks.** Headless Edge compared the committed `style.css` and `map.js` with the new ones. Everything passed, with no errors.
+- **Phone, 375×667:**
+  - **Opening view:** zoom 6, with all four counties fully on screen. Before, it was zoom 9 with none of them fully on screen.
+  - **Layout:** the map is the top 367px, and the panel is the bottom 300px and scrolls on its own. The page itself doesn't scroll.
+  - **County selected:** the area panel spans 8–321px, which keeps it off the zoom buttons.
+  - **A link:** `#9/21.3/-157.85/` still opens at zoom 9.
+- **Phone, 320×568:** the area panel fits, with no overlaps.
+- **The tour on a phone:** all 7 popovers fit on screen, and the long ones scroll.
+- **Phone held sideways (667×375) and tablet (768×1024):** the area panel used to overlap the sidebar. Now it sits beside it.
+- **Desktop, 1400×900:** the same positions and styles as before, with and without a county selected.
+- **Reduced motion:** animations drop to nothing, and zooming still works.
+
+**Your checks.** On your computer, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M). After a push, you can also use your phone on the live site.
+- [ ] Pick a phone, such as iPhone SE. Reload. The map shows every island, and the sidebar is a panel underneath it that scrolls.
+- [ ] Turn on **1-Family Housing** in the panel, then tap Oʻahu. The area panel appears across the top of the map, and the zoom buttons stay clear.
+- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. Every popover fits on screen.
+- [ ] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
+- [ ] Turn off the device toolbar. The desktop layout looks the same as before.
+
+**Left for Feature 12 (mobile drawer):** a button to hide and show the panel. Also, the tour text still says "the menu on the left-hand side".
+
+---
+
+## Shared links can turn House and Senate off (built, not committed yet)
+
+- [x] Approved in chat (2026-10-02).
+
+**What changed** (in [scripts/map.js](scripts/map.js)): when a link has filters, `setFilters()` now starts with every box unchecked, then checks only the boxes the link lists. So a link reopens exactly as it was shared. Opening the site without a link still shows House and Senate, your default.
+
+**Claude's checks.** Headless Edge compared the old `map.js` with the new one, using the same `index.html`. Everything passed, with no errors.
+- **No link, or a link with only the map view:** House and Senate are on in both versions.
+- **A link made by unchecking House:** the old code reopens it with House on. The new code reopens it with House off and Senate on.
+- **A link with both off** (`townActive=&opacity=90`): the old code turned both back on. The new code keeps them off.
+- **A link from before your default** (1-family filters, no overlays): it reopens with the filters and no overlays, and the URL stays as it was shared.
+- **The 7 bad links from Feature 2:** all of them clean up to the URLs your Feature 2 checklist expects again. The live code had been adding `Overlay=house&Overlay=senate` to every one.
+
+**Your checks.** Open each link in a new tab:
+- [ ] Open http://localhost:8000. House and Senate are on.
+- [ ] Uncheck **House District**, copy the URL, and open it in a new tab. House stays off and Senate stays on.
+- [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. After a few seconds, the URL ends in `/townActive=&opacity=90`, and House and Senate are off.
+
+---
+
+## Feature 7: Fix the broken filters in the data pipeline (built and committed)
 
 - [x] Plan approved in chat (2026-10-02).
 
@@ -29,7 +90,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 `index.html` and `scripts/map.js` didn't change for this feature. Your `index.html` edit, with House and Senate checked by default, is committed separately. The tests below ran without it. A separate load with it and the new data showed both overlays and 15 labels at the statewide view, with no errors.
 
-- [ ] **Known issue from that edit:** a shared link can't turn House or Senate off. A link restores only the boxes it lists, and those two now start checked. So a link someone made with House off opens with House on. The fix is a small change to `setFilters()`: when a link has filters, start from every box unchecked.
+**Known issue from that edit:** a shared link couldn't turn House or Senate off. This is fixed in "Shared links can turn House and Senate off" above.
 
 **Claude's checks** (all passed):
 - **Install:** `requirements.txt` installs cleanly in a fresh Python 3.13.5 environment. `jupyter execute` runs the notebook in 53 seconds.
