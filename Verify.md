@@ -6,48 +6,51 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 2: URL state with `URLSearchParams` (planned, not built)
+## Feature 2: URL state with `URLSearchParams` (built, not committed yet)
 
-- [ ] Review the plan below, then approve or change it in chat.
+- [x] Plan approved in chat (2026-10-01).
 
-**Goal:** a crafted or mangled link can no longer break the map, and only values that match a real input are restored from the URL. This fixes review items #3 and #10.
+**What changed** (all in [scripts/map.js](scripts/map.js)): the map reads its filters from the link with `URLSearchParams`.
+- It only restores values that match a real checkbox, the opacity slider's range, or a county that has zoning data.
+- URL text is only ever compared, never turned into a jQuery selector.
+- After the data loads, a link with junk in it is rewritten to the state that was actually restored, so bad links clean themselves up.
+- Links shared before this change work exactly as before.
 
-**Today:** `setFilters()` runs URL text through `$.unserialize`, which decodes it twice, then builds jQuery selectors from it ([map.js:213-239](scripts/map.js#L213-L239)). A broken `%` sequence or a quote in the link throws an error. `setFilters()` runs inside `initMap()`, so when it throws, the whole map fails to load.
+This fixes review items #3 and #10.
 
-**Changes** (all in [scripts/map.js](scripts/map.js)):
+**Claude's checks** (headless Edge, old code vs. new; all passed):
+- Links made by the old code restore the same state in the new code, and stay byte-for-byte the same. This covered four sample states, from a single filter up to every checkbox at once.
+- The new URL output matches jQuery's `serialize()` exactly. Reloading restores the same state, and checking a box still updates the URL right away.
+- A fresh visit keeps its plain `#9/20.4162/-157.4015/` URL.
+- Every bad link below loads with no errors.
 
-1. **Two small helpers.**
-   - `getUrlFilterParams()` reads the filter part of the hash with `URLSearchParams`, which decodes once and never throws.
-   - `getFormParams()` builds the query string from the form with `FormData`.
-2. **`updateUrl()`** ([95-99](scripts/map.js#L95-L99)) uses `getFormParams()` instead of jQuery's `serialize()`. For this form's values, the output is identical, so existing shared links keep working.
-3. **Rewrite the restore part of `setFilters()`** ([213-239](scripts/map.js#L213-L239)):
-   - **`townActive`:** keep the first value, and check it once the data loads (step 4).
-   - **`opacity`:** use it only if it's a whole number within the slider's min and max. Otherwise the default (90) stays.
-   - **Everything else:** check the checkbox whose `name` and `value` both match exactly. The match compares input properties, so URL text never becomes a selector. Pairs that match nothing are ignored.
-   - The selector typo on line 218 (#10) goes away with the old code.
-4. **In `loadZones()`:**
-   - If `townActive` isn't a county in the zoning data, clear it. That includes Kalawao, which has a county outline but no zones.
-   - Then, if the link had a filter part, rewrite the URL from the restored state. Bad links clean themselves up; good links stay exactly the same.
+- [ ] Check **2-Family Housing**. The URL updates. Reload the page and the same boxes come back.
+- [ ] Click a county and move the opacity slider, then paste the URL into a new tab. The same county, boxes, and opacity come back.
+- [ ] Open each bad link below. For each one, the map loads, the console shows no red errors, and the URL cleans itself up as described.
 
-**Not changing:**
-- the URL format
-- the rest of `setFilters()`: revealing subgroups, the red "at least one" warnings, and the Clear filters button (Feature 6 handles that)
-- jQuery used elsewhere
+**Bad links to keep testing.** Re-run these whenever URL handling changes:
 
-`jquery.unserialize.js` stays in place under your keep-everything rule. Nothing will call it anymore.
-
-**How Claude will test it** (headless browser, old code vs. new):
-- Links made by the old code restore the same checkboxes, county, and opacity.
-- The new URL output matches `$('#form').serialize()` exactly across sample states.
-- Setting filters, a county, and opacity, then reloading, gives back the same state.
-- Each of these bad links loads the map with no errors and gets cleaned up:
-  - `1F"]x=A` (throws a selector error today)
-  - `opacity=%E0%A4%A` (throws `URIError` today)
-  - `townActive=Nowhere`
-  - `townActive=Kalawao`
-  - `opacity=9999`
-  - `1MLS=Z`
-- A fresh visit keeps its plain `#9/…/` URL.
+- [ ] [Quote and bracket in a name](http://localhost:8000/#9/20.4/-157.4/1F%22%5Dx=A).
+  - Before: the map never loaded (selector error).
+  - Now: it loads, and the filter part of the URL becomes `townActive=&opacity=90`.
+- [ ] [Broken `%` sequence](http://localhost:8000/#9/20.4/-157.4/opacity=%E0%A4%A).
+  - Before: the map never loaded (`URIError`).
+  - Now: it loads with the default opacity of 90.
+- [ ] [Unknown county](http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere).
+  - Before: the bogus county stayed in the URL.
+  - Now: it's cleared.
+- [ ] [County with no zoning data](http://localhost:8000/#9/20.4/-157.4/townActive=Kalawao).
+  - Before: Kalawao was outlined in yellow as if selected.
+  - Now: no outline, and the county is cleared.
+- [ ] [Opacity out of range](http://localhost:8000/#9/20.4/-157.4/opacity=9999).
+  - Before: the slider jumped to 100.
+  - Now: it stays at the default of 90.
+- [ ] [A value no checkbox has](http://localhost:8000/#9/20.4/-157.4/1MLS=Z).
+  - Before: it stayed in the URL.
+  - Now: it's dropped.
+- [ ] [Good and bad values mixed](http://localhost:8000/#9/20.4/-157.4/townActive=Honolulu&1F=&1F=A&opacity=50&bogus=1&1MLS=Z).
+  - Now: Honolulu, **1-Family Housing** with "Allowed As of Right", and opacity 50 come back, and `bogus=1` and `1MLS=Z` drop out of the URL.
+  - The lot-size group turns red because none of its boxes are checked. That's the existing "pick at least one" warning, not a bug.
 
 ---
 
