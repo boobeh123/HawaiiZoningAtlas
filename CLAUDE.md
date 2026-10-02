@@ -39,9 +39,14 @@ Don't follow the Docker steps in `data-pipeline/README.md`. The Dockerfile's `CM
 
 ## Site architecture (`index.html` + `scripts/map.js`)
 
-- **Script loading.** Plain global script tags, no modules or bundler. jQuery 3.5.1, Leaflet 1.7.1, Driver.js 0.9.8, and Tachyons CSS load from CDNs; Esri Leaflet also loads but nothing uses it. `scripts/` holds `map.js` plus vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize. `data/demographics.js` defines the global `demographics` and must load before `map.js`.
+- **Script loading.** Plain global script tags, no modules or bundler, so every script shares one set of global names. That's why the map's layer is called `zonesLayer`: Google Analytics owns `window.dataLayer`.
+  - jQuery 3.5.1, Leaflet 1.7.1, Driver.js 0.9.8, and Tachyons CSS load from CDNs. Esri Leaflet also loads, but nothing uses it.
+  - `scripts/` holds `map.js` and `analytics.js`. `analytics.js` sets up Google Analytics and skips it on localhost.
+  - It also holds vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize, which nothing calls anymore.
+  - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
 - **Data loading.** `initMap()` fetches `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). Each `loadX()` overlay function fetches its own file and fills `overlays[key]` asynchronously.
+- **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()` and `calculateActiveArea()` do. Never build it from HTML strings.
 - **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
 - **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`.
@@ -51,8 +56,15 @@ Don't follow the Docker steps in `data-pipeline/README.md`. The Dockerfile's `CM
   - `Ty`: zone type `R`/`M`/`N` (null means not zoned), mapped to colors by `zone2color`.
   - `MA`: municipal acres, i.e. zone area minus federal/state land. Feeds the area calculator.
   - `TN`: tooltip note. `AHD`, `EHD`, and `MUS` are tooltip flags.
-- **County selection.** Clicking a zone selects its county. Each `T` value must equal a `name20` in `counties.geojson` and a key in `demographics` (`Hawaii`, `Honolulu`, `Kauai`, `Maui`, no ʻokina), or `calculateActiveArea()` throws.
-- **URL state.** The hash is `#zoom/lat/lng/<serialized form>`. `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment, and `setFilters()` restores the form from that part with `$.unserialize`. Don't replace it with the upstream library.
+- **County selection.** Clicking a zone selects its county. Each `T` value should match two things:
+  - a `name20` in `counties.geojson`, for the outline highlight
+  - a key in `demographics` (`Hawaii`, `Honolulu`, `Kauai`, `Maui`, no ʻokina), for the stats row. Without a match, the panel leaves the stats out.
+- **URL state.** The hash is `#zoom/lat/lng/<serialized form>`.
+  - `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment. Don't replace it with the upstream library.
+  - `updateUrl()` writes the filter part with `getFormParams()`, which is `URLSearchParams` over `FormData`. That's the same format jQuery's `serialize()` produced.
+  - `setFilters()` reads it with `getUrlFilterParams()` and only restores values that match a real input.
+  - `loadZones()` drops a `townActive` that has no zoning data, and rewrites any link that carried junk.
+  - Never build selectors from URL text. The bad-link regression list is in `Verify.md`.
 
 ## Data pipeline (spreadsheet → `data/final.geojson`)
 
