@@ -19,6 +19,60 @@ var zTown = 'T'
 var zType = 'Ty'
 var zAcres = 'MA' // municipal area
 
+/*
+ * Creates an element whose content is plain text. Use it instead of HTML
+ * strings for anything that comes from the data or the URL, so that text
+ * can never be parsed as markup.
+ */
+const createTextElement = (tagName, text = '', className = '') => {
+  const element = document.createElement(tagName)
+  element.textContent = text
+  if (className) {
+    element.className = className
+  }
+  return element
+}
+
+/*
+ * Builds a zone's hover tooltip from its GeoJSON properties
+ */
+const buildZoneTooltip = (properties) => {
+  const tooltip = document.createElement('div')
+  const zoneName = properties[zName]
+
+  if (!zoneName || zoneName === 'Not Zoned' || zoneName === 'NULL') {
+    // append() inserts strings as text nodes, never as HTML
+    tooltip.append(
+      createTextElement('strong', 'Not Zoned'),
+      document.createElement('br'),
+      properties[zTown] ?? ''
+    )
+    return tooltip
+  }
+
+  const notes = [
+    properties['AHD'] === 'Yes' && 'Affordable Housing Only',
+    properties['EHD'] === 'Yes' && 'Elderly Housing Only',
+    properties['MUS'] === '1' && 'Requires a Minimum Home Size',
+  ].filter(Boolean)
+
+  tooltip.append(
+    createTextElement('h6', zoneName, 't-t ttu'),
+    createTextElement('strong', properties[zTown], 'black-50'),
+    document.createElement('br'),
+    ...notes.flatMap((note) => [note, document.createElement('br')])
+  )
+
+  if (properties['TN']) {
+    tooltip.append(
+      createTextElement('strong', 'Note:'),
+      ` ${properties['TN']}`
+    )
+  }
+
+  return tooltip
+}
+
 var style = function (filters, feature) {
   var opacity = $('input[name="opacity"]').val() / 100
 
@@ -88,21 +142,9 @@ var loadZones = function (geojson) {
         }
       })
 
-      // Add tooltip
-      layer.bindTooltip(
-        !pp[zName] || pp[zName] === 'Not Zoned' || pp[zName] === 'NULL'
-          ? '<strong>Not Zoned</strong><br>' + pp[zTown]
-          : '<h6 class="t-t ttu">' +
-              pp[zName] +
-              '</h6><strong class="black-50">' +
-              pp[zTown] +
-              '</strong><br>' +
-              (pp['AHD'] == 'Yes' ? 'Affordable  Housing Only<br>' : '') +
-              (pp['EHD'] == 'Yes' ? 'Elderly Housing Only<br>' : '') +
-              (pp['MUS'] == '1' ? 'Requires a Minimum Home Size<br>' : '') +
-              (pp['TN'] ? '<strong>Note:</strong> ' + pp['TN'] : ''),
-        { sticky: true }
-      )
+      // Add tooltip. Passing a function means it's built from plain text
+      // each time it opens, so Leaflet never parses data as HTML.
+      layer.bindTooltip(() => buildZoneTooltip(pp), { sticky: true })
     },
   }).addTo(map)
 
@@ -298,55 +340,110 @@ var loadTowns = function (bounds) {
 }
 
 /*
- * Calculates what % of a selected town satisfies filtering criteria,
- * and updates the message in the sidebar
+ * Builds the row of county stats shown under the area calculation
  */
-var calculateActiveArea = function () {
-  if (!townActive) {
-    $('#activeAreaCalculator').html('').addClass('dn')
+const buildDemographicStats = (townDemographics) => {
+  const stats = [
+    {
+      icon: 'payments',
+      value: `$${townDemographics.income.toLocaleString()}`,
+      label: 'HH Income',
+      title: 'Median Household Income',
+      className: 'black-50 dib w-third fl tl',
+    },
+    {
+      icon: 'people_alt',
+      value: `${townDemographics.nativeHawaiian}%`,
+      label: 'Native Hawaiian',
+      title:
+        'Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)',
+      className: 'black-50 dib w-third fl tc',
+    },
+    {
+      icon: 'toll',
+      value: `${townDemographics.burdened}%`,
+      label: 'Cost-Burdened',
+      title: 'Cost-Burdened Households',
+      className: 'black-50 dib fl ml2 tr',
+    },
+  ]
+
+  const row = createTextElement('div', '', 'areaStats')
+  row.append(
+    ...stats.map((stat) => {
+      const item = createTextElement('span', '', stat.className)
+      item.title = stat.title
+      item.append(
+        createTextElement('span', stat.icon, 'material-icons v-top statIcon'),
+        ` ${stat.value}`,
+        document.createElement('br'),
+        stat.label
+      )
+      return item
+    })
+  )
+  return row
+}
+
+/*
+ * Calculates what % of a selected town satisfies filtering criteria,
+ * and updates the message in the sidebar. Everything is set as text,
+ * because `townActive` can come from the URL.
+ */
+const calculateActiveArea = () => {
+  const calculator = document.querySelector('#activeAreaCalculator')
+  const filters = getFilters()
+  const sumAcres = (features) =>
+    features.reduce(
+      (sum, feature) => sum + (feature.properties[zAcres] || 0),
+      0
+    )
+
+  const townZones = townActive
+    ? dataLayer
+        .getLayers()
+        .map((layer) => layer.feature)
+        .filter((feature) => feature.properties[zTown] === townActive)
+    : []
+  const totalAcres = sumAcres(townZones)
+  const satisfiesAcres = sumAcres(
+    townZones.filter((feature) => satisfiesFilters(filters, feature))
+  )
+
+  // Hide the panel when no town is selected, or when the town has no zoned
+  // land (for example, an unknown town name in the URL)
+  if (totalAcres === 0) {
+    calculator.replaceChildren()
+    calculator.classList.add('dn')
     return
   }
 
-  var filters = getFilters()
+  const satisfiesPerc = ((satisfiesAcres / totalAcres) * 100).toFixed(1)
 
-  var totalAcres = 0
-  var satisfiesAcres = 0
-
-  dataLayer.eachLayer(function (l) {
-    if (l.feature.properties[zTown] === townActive) {
-      totalAcres += l.feature.properties[zAcres] || 0
-      if (satisfiesFilters(filters, l.feature)) {
-        satisfiesAcres += l.feature.properties[zAcres] || 0
-      }
-    }
-  })
-
-  var satisfiesPerc = ((satisfiesAcres / totalAcres) * 100).toFixed(1)
-  satisfiesAcres = parseInt(satisfiesAcres).toLocaleString()
-  totalAcres = parseInt(totalAcres).toLocaleString()
-
-  $('#activeAreaCalculator').html(
-    '<p class="ma0 mb2">' +
-      satisfiesAcres +
-      ' acres, or ' +
-      satisfiesPerc +
-      '% of <span class="bb-dotted" title="Excludes state- and federal-owned land, and unzoned parts of town">zoned municipal area</span> in <strong>' +
-      townActive +
-      '</strong> (' +
-      totalAcres +
-      ' acres) satisfies your filtering criteria.</p><div style="font-size: 13px; display: flex"><span class="black-50 dib w-third fl tl" title="Median Household Income">' +
-      '<span class="material-icons v-top" style="font-size:16px">payments</span> $' +
-      demographics[townActive].income.toLocaleString() +
-      '<br>HH Income</span><span class="black-50 dib w-third fl tc" title="Black, Indigenous, People of Color">' +
-      '<span class="material-icons v-top" style="font-size:16px">people_alt</span> ' +
-      demographics[townActive].nativeHawaiian +
-      '%<br>Native Hawaiian</span><span class="black-50 dib fl ml2 tr" title="Cost-Burdened Households">' +
-      '<span class="material-icons v-top" style="font-size:16px">toll</span> ' +
-      demographics[townActive].burdened +
-      '%<br>Cost-Burdened</span>' +
-      '</div>'
+  const municipalArea = createTextElement(
+    'span',
+    'zoned municipal area',
+    'bb-dotted'
   )
-  $('#activeAreaCalculator').removeClass('dn')
+  municipalArea.title =
+    'Excludes state- and federal-owned land, and unzoned parts of town'
+
+  const summary = createTextElement('p', '', 'ma0 mb2')
+  summary.append(
+    `${Math.trunc(satisfiesAcres).toLocaleString()} acres, or ${satisfiesPerc}% of `,
+    municipalArea,
+    ' in ',
+    createTextElement('strong', townActive),
+    ` (${Math.trunc(totalAcres).toLocaleString()} acres) satisfies your filtering criteria.`
+  )
+  calculator.replaceChildren(summary)
+
+  // Stats exist only for the counties listed in data/demographics.js
+  if (Object.hasOwn(demographics, townActive)) {
+    calculator.append(buildDemographicStats(demographics[townActive]))
+  }
+
+  calculator.classList.remove('dn')
 }
 
 /*
@@ -356,7 +453,7 @@ var loadTransit = function () {
   $.getJSON('./data/rail-transit.geojson', (geojson) => {
     const transitMarkers = geojson.features.map(function (o) {
       return L.marker(o.geometry.coordinates.reverse()).bindPopup(
-        o.properties.STATION
+        document.createTextNode(o.properties.STATION)
       )
     })
 
@@ -441,7 +538,9 @@ var loadHouse = function () {
     })
 
     overlays['house'].eachLayer(function (layer) {
-      layer.bindPopup(layer.feature.properties.state_house)
+      layer.bindPopup(
+        document.createTextNode(layer.feature.properties.state_house)
+      )
     })
   })
 }
@@ -459,7 +558,9 @@ var loadSenate = function () {
       },
     })
     overlays['senate'].eachLayer(function (layer) {
-      layer.bindPopup(layer.feature.properties.state_senate)
+      layer.bindPopup(
+        document.createTextNode(layer.feature.properties.state_senate)
+      )
     })
   })
 }
