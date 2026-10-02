@@ -127,8 +127,9 @@ var loadZones = function (geojson) {
     townActive = ''
     document.querySelector('#form input[name="townActive"]').value = ''
     if (towns) {
-      towns.setStyle(townStyle)
+      drawCountyOutlines()
     }
+    updateResetButton()
   }
 
   var filters = getFilters()
@@ -152,7 +153,8 @@ var loadZones = function (geojson) {
         $('input[name="townActive"]').val(townActive)
 
         // Draw active boundary
-        towns.setStyle(townStyle)
+        drawCountyOutlines()
+        updateResetButton()
 
         // Recalculate area
         calculateActiveArea()
@@ -202,12 +204,10 @@ var loadZones = function (geojson) {
     // Downloads an overlay's file the first time it's turned on
     syncOverlays()
 
-    if ($('.main-in-group:checked').length > 0) {
-      $('#resetFilters').show()
-    } else {
-      $('#resetFilters').hide()
-    }
+    updateResetButton()
   })
+
+  document.querySelector('#resetFilters').addEventListener('click', clearFilters)
 
   // When main checkbox in filters group is clicked, open up subgroup
   $('.main-in-group').change(function () {
@@ -284,24 +284,7 @@ const setFilters = () => {
   $('.at-least-one-checked:has( input:checked )').removeClass('bg-light-red')
   $('.at-least-one-checked:not(:has( input:checked ))').addClass('bg-light-red')
 
-  if ($('.main-in-group:checked').length > 0) {
-    $('#resetFilters').show()
-  } else {
-    $('#resetFilters').hide()
-  }
-
-  // Add event listener to the clear filters button
-  $('#resetFilters').on('click', function () {
-    // Clear town selection
-    townActive = ''
-    towns.setStyle(townStyle)
-
-    // Clear filters
-    $('.main-in-group:checked').click()
-
-    // Hide button
-    $(this).hide()
-  })
+  updateResetButton()
 }
 
 /*
@@ -351,14 +334,16 @@ var addColorPolygonsToLegend = function () {
 }
 
 /*
- * Defines style for 169 town outlines: yellow if selected,
- * semi-transparent white if not
+ * Styles the county outlines: thick cyan around the selected county, thin
+ * semi-transparent white around the others. No other layer uses cyan, so the
+ * selection stands out from the pink House and yellow Senate lines.
  */
-var townStyle = function (feature) {
+const townStyle = (feature) => {
+  const isSelected = feature.properties.name20 === townActive
   return {
-    stroke: feature.properties.name20 === townActive ? 5 : 2,
-    color: feature.properties.name20 === townActive ? 'yellow' : 'white',
-    opacity: feature.properties.name20 === townActive ? 1 : 0.4,
+    weight: isSelected ? 5 : 2,
+    color: isSelected ? '#00e5ff' : 'white',
+    opacity: isSelected ? 1 : 0.4,
     fillOpacity: 0,
     fillColor: 'rgba(0,0,0,0)',
   }
@@ -370,12 +355,65 @@ var townStyle = function (feature) {
  */
 var loadTowns = function (bounds) {
   towns = L.geoJSON(bounds, {
-    pane: 'overlays',
+    // Its own pane, above the House and Senate lines (see initMap)
+    pane: 'countyOutlines',
     interactive: false,
     style: townStyle,
   })
 
   towns.addTo(map)
+}
+
+/*
+ * Restyles the county outlines after the selection changes. The selected
+ * outline goes on top, so a neighbor's outline can't cover it: Kalawao shares
+ * a border with Maui County on Molokai.
+ */
+const drawCountyOutlines = () => {
+  towns.setStyle(townStyle)
+  towns
+    .getLayers()
+    .find((layer) => layer.feature.properties.name20 === townActive)
+    ?.bringToFront()
+}
+
+/*
+ * Shows the Clear filters button while a housing filter is on or a county is
+ * selected. Overlay checkboxes don't count, because they aren't filters.
+ */
+const updateResetButton = () => {
+  const housingFilterOn = [
+    ...document.querySelectorAll('#form .main-in-group:checked'),
+  ].some((checkbox) => checkbox.name !== 'Overlay')
+  document.querySelector('#resetFilters').hidden =
+    !housingFilterOn && !townActive
+}
+
+/*
+ * Clears every housing filter and the selected county. Overlays and the
+ * opacity slider aren't filters, so they stay as they are.
+ */
+const clearFilters = () => {
+  const form = document.querySelector('#form')
+
+  form.querySelectorAll('.filter-group').forEach((group) => {
+    const mainCheckbox = group.querySelector('.main-in-group')
+    if (!mainCheckbox || mainCheckbox.name === 'Overlay') return
+
+    group.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.checked = false
+    })
+    group.querySelector('.subgroup')?.classList.add('dn')
+  })
+
+  // Clear the county everywhere: the map, the form, and so the URL too
+  townActive = ''
+  form.querySelector('input[name="townActive"]').value = ''
+  drawCountyOutlines()
+
+  // One change event runs the usual update: it restyles the zones, rewrites
+  // the URL, hides the area panel, and hides this button
+  form.dispatchEvent(new Event('change'))
 }
 
 /*
@@ -1102,6 +1140,11 @@ var initMap = function () {
   // Create overlays pane
   map.createPane('overlays')
   map.getPane('overlays').style.zIndex = 501
+
+  // County outlines sit just above the overlays, so the selected county's
+  // outline stays visible over the House and Senate lines
+  map.createPane('countyOutlines')
+  map.getPane('countyOutlines').style.zIndex = 502
 
   // Overlays download the first time they're turned on (see showOverlay)
   // loadKauai()
