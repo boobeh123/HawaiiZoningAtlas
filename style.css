@@ -83,6 +83,17 @@ hr {
   font-size: 0.95em;
 }
 
+/* Row of county stats under the area calculation */
+.areaStats {
+  display: flex;
+  font-size: 13px;
+}
+
+/* Two classes so this outranks the 24px in Google's .material-icons rule */
+.areaStats .statIcon {
+  font-size: 16px;
+}
+
 .leaflet-control-layers-expanded {
   border: 1px solid white;
   border-radius: 2px;
