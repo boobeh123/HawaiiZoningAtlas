@@ -140,6 +140,12 @@ hr {
   font-size: 20px;
 }
 
+/* Google's .material-icons rule sets display: inline-block, which would beat
+   the hidden attribute (see updateResetButton) */
+#resetFilters[hidden] {
+  display: none;
+}
+
 .leaflet-tooltip {
   width: 230px;
   white-space: normal !important;
