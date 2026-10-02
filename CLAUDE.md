@@ -18,7 +18,7 @@ Two independent halves:
 python -m http.server 8000   # then open http://localhost:8000
 ```
 
-The Driver.js intro tour shows on each visit until it's closed or finished once in that browser. That sets the localStorage flag `hzaTourSeen`. To see the tour again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload. Test at desktop width, because the sidebar, filters included, is hidden below 600px.
+The Driver.js intro tour shows on each visit until it's closed or finished once in that browser. That sets the localStorage flag `hzaTourSeen`. To see the tour again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload. Test at desktop width and with the DevTools device toolbar (Ctrl+Shift+M), because phones get a different layout (see Layout below).
 
 **County stats.** `tools/fetchDemographics.js` generates `data/demographics.js` from the Census API, using Node built-ins only. The key lives in `.env` as `CENSUS_API_KEY` (see `.env.example`).
 
@@ -66,6 +66,10 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - It also holds vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize, which nothing calls anymore.
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
+- **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
+  - **Phones (600px and narrower):** the map takes the top `--phoneMapHeight` (55dvh) of the screen, and `#sidebar` is a scrolling panel under it. `initMap()` uses the same breakpoint to start phones at zoom 6.
+  - **601–1139px:** the area panel moves beside the sidebar. A centered panel would overlap it.
+  - **Tour popovers on phones:** they're pinned across the top with `!important`, because Driver.js positions them inline and `driver.min.css` loads after `style.css`.
 - **Data loading.** `initMap()` calls `loadMapData()`, which uses `fetch` to get `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). `#mapStatus` shows "Loading zoning data…" until the zones arrive, or an error if they don't.
 - **Overlays load on first toggle.**
   - **The loaders:** `overlayLoaders` maps each Overlay checkbox `value` to an async `loadX()`. Each loader fetches its file and returns a Leaflet layer.
@@ -95,6 +99,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment. Don't replace it with the upstream library.
   - `updateUrl()` writes the filter part with `getFormParams()`, which is `URLSearchParams` over `FormData`. That's the same format jQuery's `serialize()` produced.
   - `setFilters()` reads it with `getUrlFilterParams()` and only restores values that match a real input.
+  - **A link defines the whole form:** when a link has a filter part, `setFilters()` unchecks every box first. Boxes checked in `index.html` (House and Senate) only apply when there's no link. Otherwise a link couldn't turn them off.
   - `loadZones()` drops a `townActive` that has no zoning data, and rewrites any link that carried junk.
   - Never build selectors from URL text. The bad-link regression list is in `Verify.md`.
 
