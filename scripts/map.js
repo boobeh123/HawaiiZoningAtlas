@@ -397,8 +397,8 @@ const buildDemographicStats = (townDemographics) => {
       icon: 'people_alt',
       value: `${townDemographics.nativeHawaiian}%`,
       label: 'Native Hawaiian',
-      title:
-        'Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)',
+      // demographicsSource comes from data/demographics.js, e.g. "2020–2024 ACS 5-year estimates"
+      title: `Residents who identify as Native Hawaiian (${demographicsSource})`,
       className: 'black-50 dib w-third fl tc',
     },
     {
