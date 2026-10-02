@@ -45,7 +45,7 @@ Don't follow the Docker steps in `data-pipeline/README.md`. The Dockerfile's `CM
 The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (~25 MB) and every overlay GeoJSON, so keep committed GeoJSON simplified and minified.
 
 **Keys.** Anything the browser loads is public, so only public keys belong in site code.
-- **CARTO basemap key:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs.
+- **CARTO basemap keys:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs. There are two keys. On `localhost` and `127.0.0.1` the map uses the localhost key, and everywhere else it uses the production key.
 - **Without it:** CARTO serves an "API KEY REQUIRED" image for every tile. This started in September 2026.
 - **How it's protected:** with domain restrictions in CARTO's basemaps dashboard, not by hiding it.
 - **Census API key:** secret. Only `tools/fetchDemographics.js` uses it, on your machine, and the script bakes the numbers into `data/demographics.js`. The key never goes in site code.

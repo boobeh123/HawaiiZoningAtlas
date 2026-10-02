@@ -9,7 +9,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 ## Basemap key fix (built and committed)
 
 - [x] Key received in chat (2026-10-01). It works for both localhost and the live site.
-- [ ] In the CARTO basemaps dashboard, restrict the key to `hawaiizoningatlas.netlify.app` and `localhost`. Right now it works from any website (Claude tested a random one), so anyone could use up your free requests.
+- [X] In the CARTO basemaps dashboard, restrict the key to `hawaiizoningatlas.netlify.app` and `localhost`. Right now it works from any website (Claude tested a random one), so anyone could use up your free requests.
 
 **What changed:**
 - [scripts/map.js](scripts/map.js): a `cartoApiKey` constant in `initMap()`, added as `?key=` to both CARTO tile URLs (the base map and the labels).
@@ -20,9 +20,16 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - After: none of the 60 are, and every tile request carries the key.
 - The screenshots show the light basemap and the place names back above the zones. No errors.
 
-- [ ] On localhost, the map shows the light basemap with place names (Honolulu, Kāneʻohe, Kailua-Kona, and so on) and no "API KEY REQUIRED" anywhere. Zoom in and out a few levels.
-- [ ] Switch to **Satellite** and back to **Map**. Both work.
+- [X] On localhost, the map shows the light basemap with place names (Honolulu, Kāneʻohe, Kailua-Kona, and so on) and no "API KEY REQUIRED" anywhere. Zoom in and out a few levels.
+- [X] Switch to **Satellite** and back to **Map**. Both work.
 - [ ] After you push, check https://hawaiizoningatlas.netlify.app the same way.
+
+**Production key** (added 2026-10-01, not committed yet): the map uses the localhost key on `localhost` and `127.0.0.1`, and your production key everywhere else.
+- **Claude's check:** on `127.0.0.1`, all 60 tiles carried the localhost key. On a production-like hostname, all 60 carried the production key. No watermarks, no errors.
+- **Heads-up:** both keys still return real tiles when a request claims to come from `example.com`, so CARTO isn't enforcing the restrictions yet. They may still be taking effect. Recheck the dashboard later.
+
+- [ ] On localhost, open DevTools → **Network** and filter for `cartocdn`. The tile URLs contain `key=cb1_476c_1_`.
+- [ ] After you push, do the same on the live site. The tile URLs contain `key=cb1_476c_2_`.
 
 ---
 
@@ -65,10 +72,10 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - Honolulu's six-figure income still fits the panel layout.
 - `.env` is ignored by git, and `.env.example` isn't.
 
-- [ ] Click a zone in each county. The panel shows the numbers from the table above.
-- [ ] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020–2024 ACS 5-year estimates)".
-- [ ] Run `git status`. `.env` isn't listed, so your Census key can't be committed.
-- [ ] Once a year, when the Census publishes a new 5-year release (usually in December), rerun `node --env-file=.env tools/fetchDemographics.js <year>`.
+- [X] Click a zone in each county. The panel shows the numbers from the table above.
+- [X] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020–2024 ACS 5-year estimates)".
+- [X] Run `git status`. `.env` isn't listed, so your Census key can't be committed.
+- [X] Once a year, when the Census publishes a new 5-year release (usually in December), rerun `node --env-file=.env tools/fetchDemographics.js <year>`.
 
 ---
 
@@ -88,11 +95,15 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - **Production:** on a fake production hostname pointed at the test server, the page requests `gtag.js` with `G-ZTZX623WY7` and queues the `js` and `config` commands.
 - **Features 1 and 2:** unchanged. The tooltip and county panel are pixel-identical, the URL round trip works, and the quote-in-name bad link still loads cleanly.
 
-- [ ] Press Ctrl+U to view the page source. There's no inline `<script>` block, and `scripts/analytics.js` loads with `defer`.
-- [ ] On localhost, open DevTools → **Network**, reload, and filter for `google`. Nothing shows up.
-- [ ] In the console, run `zonesLayer.getLayers().length`. It returns `262`.
-- [ ] In the console, run `window.dataLayer`. It's an empty array (`[]`), because Analytics is skipped locally.
-- [ ] After you deploy, open the live site's **Network** tab. It shows a `gtag/js?id=G-ZTZX623WY7` request and a `collect` request to Google Analytics.
+- [ ] Press Ctrl+U to view the page source. Several `<script>` tags in the `<head>` is fine. Each one should have a `src="…"` and nothing between its opening and closing tags. A `<script>` with code written between its tags is an inline script, and there should be none. `scripts/analytics.js` loads with `defer`.
+- [ ] On localhost, open DevTools → **Network**, reload, and filter for `googletagmanager`. Nothing shows up. (`fonts.googleapis.com` is expected. That's Google Fonts serving the icons.)
+- [X] In the console, run `zonesLayer.getLayers().length`. It returns `262`.
+- [X] In the console, run `window.dataLayer`. It's an empty array (`[]`), because Analytics is skipped locally.
+- [ ] On the live site, open DevTools → **Network** first, then reload. Requests made before DevTools opened aren't listed.
+  - Filter for `gtag`. You should see a `gtag/js?id=G-ZTZX623WY7` request.
+  - Filter for `collect`. You should see a request to Google Analytics.
+  - If neither shows up, an ad blocker or your browser's tracking prevention may be stopping them. Try an InPrivate window with extensions turned off.
+  - Claude's live check on 2026-10-01 saw the `gtag.js` request.
 
 ---
 
@@ -114,32 +125,36 @@ This fixes review items #3 and #10.
 - A fresh visit keeps its plain `#9/20.4162/-157.4015/` URL.
 - Every bad link below loads with no errors.
 
-- [ ] Check **2-Family Housing**. The URL updates. Reload the page and the same boxes come back.
-- [ ] Click a county and move the opacity slider, then paste the URL into a new tab. The same county, boxes, and opacity come back.
-- [ ] Open each bad link below. For each one, the map loads, the console shows no red errors, and the URL cleans itself up as described.
+- [X] Check **2-Family Housing**. The URL updates. Reload the page and the same boxes come back.
+- [X] Click a county and move the opacity slider, then paste the URL into a new tab. The same county, boxes, and opacity come back.
+- [ ] Open each bad link below **in a new tab**, or paste it and then press F5. For each one, the map loads, the console shows no red errors, and the URL cleans itself up as described.
 
-**Bad links to keep testing.** Re-run these whenever URL handling changes:
+**Bad links to keep testing.** Re-run these whenever URL handling changes.
+
+**How to open them:** use a new tab, or paste the link and press F5. If you paste a link into a tab that already shows the map, only the part after `#` changes. The browser doesn't reload the page, and the map only reads the link when the page loads, so nothing changes. Claude reproduced exactly that: after pasting, the URL kept the bad link and the slider stayed at 10%. After F5, the URL cleaned itself up.
+
+**What "cleans itself up" looks like:** a few seconds after the page loads, everything after the third `/` is rewritten to what was actually restored. For most links below that's `townActive=&opacity=90`, meaning no county is selected and opacity is at its default. The map numbers before it (`#9/20.4/-157.4`) may also round a little, for example to `#9/20.4013/-157.4011`.
 
 - [ ] [Quote and bracket in a name](http://localhost:8000/#9/20.4/-157.4/1F%22%5Dx=A).
   - Before: the map never loaded (selector error).
   - Now: it loads, and the filter part of the URL becomes `townActive=&opacity=90`.
 - [ ] [Broken `%` sequence](http://localhost:8000/#9/20.4/-157.4/opacity=%E0%A4%A).
   - Before: the map never loaded (`URIError`).
-  - Now: it loads with the default opacity of 90.
+  - Now: it loads with the default opacity of 90, and the URL ends in `/townActive=&opacity=90`.
 - [ ] [Unknown county](http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere).
   - Before: the bogus county stayed in the URL.
-  - Now: it's cleared.
-- [ ] [County with no zoning data](http://localhost:8000/#9/20.4/-157.4/townActive=Kalawao).
+  - Now: it's cleared, so the URL ends in `/townActive=&opacity=90`. `townActive=` with nothing after it means no county is selected.
+- [X] [County with no zoning data](http://localhost:8000/#9/20.4/-157.4/townActive=Kalawao).
   - Before: Kalawao was outlined in yellow as if selected.
   - Now: no outline, and the county is cleared.
 - [ ] [Opacity out of range](http://localhost:8000/#9/20.4/-157.4/opacity=9999).
   - Before: the slider jumped to 100.
-  - Now: it stays at the default of 90.
+  - Now: the slider stays at the default of 90, and the URL ends in `/townActive=&opacity=90`.
 - [ ] [A value no checkbox has](http://localhost:8000/#9/20.4/-157.4/1MLS=Z).
   - Before: it stayed in the URL.
-  - Now: it's dropped.
-- [ ] [Good and bad values mixed](http://localhost:8000/#9/20.4/-157.4/townActive=Honolulu&1F=&1F=A&opacity=50&bogus=1&1MLS=Z).
-  - Now: Honolulu, **1-Family Housing** with "Allowed As of Right", and opacity 50 come back, and `bogus=1` and `1MLS=Z` drop out of the URL.
+  - Now: it's dropped, meaning `1MLS=Z` disappears from the URL. The URL ends in `/townActive=&opacity=90`.
+- [X] [Good and bad values mixed](http://localhost:8000/#9/20.4/-157.4/townActive=Honolulu&1F=&1F=A&opacity=50&bogus=1&1MLS=Z).
+  - Now: Honolulu, **1-Family Housing** with "Allowed As of Right", and opacity 50 come back, and `bogus=1` and `1MLS=Z` drop out of the URL, which ends in `/townActive=Honolulu&1F=&1F=A&opacity=50`.
   - The lot-size group turns red because none of its boxes are checked. That's the existing "pick at least one" warning, not a bug.
 
 ---
@@ -154,9 +169,9 @@ This fixes review items #3 and #10.
 - An injected `<img onerror>` stays plain text.
 - The bad-link `TypeError` is gone.
 
-- [ ] Hover over a few zones. The tooltips look the same as before (name, county, flags).
-- [ ] Hover over a "Not Zoned" area. It shows **Not Zoned** and the county.
-- [ ] Click a zone. The panel shows the acreage sentence and three stats: HH Income, Native Hawaiian, Cost-Burdened.
+- [X] Hover over a few zones. The tooltips look the same as before (name, county, flags).
+- [X] Hover over a "Not Zoned" area. It shows **Not Zoned** and the county.
+- [X] Click a zone. The panel shows the acreage sentence and three stats: HH Income, Native Hawaiian, Cost-Burdened.
 - [X] Hover over the Native Hawaiian stat. The label reads "Residents who identify as Native Hawaiian (2020 ACS 5-year estimates)". (Since Feature 3b, it reads "2020–2024 ACS 5-year estimates".)
 - [X] Turn on **Transit Stations (Rail)** and click a station marker. Its name appears.
 - [X] In the DevTools console, run `zonesLayer.eachLayer((l) => { l.feature.properties.Z = '<img src=x onerror=alert(1)>' })`, then hover over a zone. The tooltip shows that text exactly as typed, and no alert pops up. Reload the page afterwards. (Before Feature 3, this variable was called `dataLayer`.)
