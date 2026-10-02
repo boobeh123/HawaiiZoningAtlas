@@ -159,6 +159,7 @@ Our research team read the complete zoning codes of all four counties and record
 * Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
 * County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
+* A Clear filters button that resets the housing filters and the selected county, and leaves your overlays on
 * County stats from the Census Bureau's 2020–2024 American Community Survey: median household income, Native Hawaiian residents, and cost-burdened households
 * Overlays for waterways, federal lands, state lands, Hawaiian Home Lands (DHHL), rail stations with half-mile circles, and State House and Senate districts
 * House and Senate district labels that appear as you zoom in and never overlap
@@ -245,10 +246,11 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **District labels:** House and Senate districts are labeled on the map, replacing popups that could never open
 - **Data pipeline:** the public-hearing, ADU, and minimum unit size filters now match the data, and 7 districts that showed as Not Zoned now have their names
 - **Mobile layout:** phones get the map above a scrolling filter panel, and on tablets the area panel no longer slides under the sidebar
+- **Clear filters:** the button now also clears the county from the URL, leaves the overlays on, shows only when there's something to clear, and works from the keyboard
+- **Selected county:** outlined in thick cyan above the House and Senate lines, where it used to be a thin yellow line that blended into the Senate districts
 
 #### Up next
 
-- Finish the Clear filters button, and outline the selected county
 - Revive the GitHub Actions that sync the spreadsheet into the repo
 - Shrink `final.geojson`, which is about 25 MB today
 - Semantic HTML and accessibility
