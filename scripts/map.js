@@ -1019,11 +1019,16 @@ const rememberTourSeen = () => {
  * DOM is loaded.
  */
 var initMap = function () {
+  // Zoom 9 fits the whole state on a desktop screen, but on a phone it shows
+  // only the ocean between the islands. Same 600px breakpoint as style.css.
+  // A link's own view still replaces this (see L.Hash below).
+  const startZoom = matchMedia('(max-width: 600px)').matches ? 6 : 9
+
   map = L.map('map', {
     zoomControl: false,
     tap: false,
     maxZoom: 15,
-  }).setView([20.4162, -157.4015], 9)
+  }).setView([20.4162, -157.4015], startZoom)
 
   L.control.zoom({ position: 'topright' }).addTo(map)
 
