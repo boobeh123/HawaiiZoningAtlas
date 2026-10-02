@@ -94,6 +94,40 @@ hr {
   font-size: 16px;
 }
 
+/* Loading and error message at the top of the map */
+.mapStatus {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  margin: 0;
+  padding: 8px 12px;
+  background-color: white;
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  font-size: 0.95em;
+}
+
+/* With nothing to say, the box disappears. The element stays on the page
+   because screen readers watch it for changes. */
+.mapStatus:empty {
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Loading and error line under the Overlays heading */
+.overlayStatus {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* Error text, 7.3:1 contrast on white */
+.statusError {
+  color: #b00020;
+}
+
 .leaflet-control-layers-expanded {
   border: 1px solid white;
   border-radius: 2px;
