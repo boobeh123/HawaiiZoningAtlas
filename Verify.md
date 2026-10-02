@@ -6,53 +6,39 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 4: Load overlays only when they're turned on (planned, not built)
+## Feature 4: Load overlays only when they're turned on (built, not committed yet)
 
-- [ ] Review the plan, then approve or change it in chat.
+- [x] Plan approved in chat (2026-10-01).
 
-**Goal:**
-- Stop downloading about 17 MB of overlay files on every visit.
-- Fix the crash when an overlay is checked before its file has arrived (#5).
-- Give every data file a loading message and an error message (#28).
+**What changed:**
+- **[scripts/map.js](scripts/map.js):**
+  - **Async loaders:** each overlay loader is now an `async` function. It fetches its file with `fetch` and returns its layer. Transit fetches its two files in parallel.
+  - **Load on first toggle:** `showOverlay()` downloads an overlay the first time you check it, keeps it for later toggles, and only adds it if the box is still checked. `hideOverlay()` and `syncOverlays()` handle the rest. Nothing downloads at startup anymore.
+  - **Zoning data:** `loadMapData()` loads the county outlines and the zones with a loading message and an error message.
+  - **Kept:** `loadSewer` stays as it was.
+- **[index.html](index.html):** two `role="status"` messages, one at the top of the map (`#mapStatus`) and one under the Overlays heading (`#overlayStatus`). Screen readers announce both.
+- **[style.css](style.css):** styles for the two messages. The error red has 7.3:1 contrast.
+- **[CLAUDE.md](CLAUDE.md):** describes how data and overlays load now.
 
-**Today:**
-- **Every overlay downloads up front:** `initMap()` starts all seven overlay downloads right away ([map.js:829-836](scripts/map.js#L829-L836)), whether or not anyone turns them on. Waterways alone is 11.6 MB.
-- **Checking one too early crashes:** if you check an overlay before its file finishes, `overlays[value]` is still empty and the change handler throws ([map.js:206-213](scripts/map.js#L206-L213)).
-- **Failures are silent:** none of the downloads report a failure, so a missing file just looks like an empty map.
+**Claude's checks** (headless Edge, old code vs. new; all passed):
+- **Fresh visit:** the old code downloads all 8 overlay files (about 17 MB). The new code downloads none.
+- **Toggling:** every overlay shows when checked, hides when unchecked, and shows again without a second download. The URL keeps every checked overlay.
+- **The #5 crash:** checking Waterways while its file was still downloading (delayed on purpose) made the old code throw `Cannot read properties of undefined (reading 'addTo')`, and the overlay never appeared. The new code shows "Loading Waterways…", then the overlay, with no errors.
+- **Unchecking early:** unchecking an overlay before its file arrives keeps it off.
+- **Failed overlay:** a failed Federal Lands download shows the red error, unchecks the box, and removes it from the URL. Checking it again retries and works.
+- **Failed zoning data:** the old code fails silently. The new code shows "Couldn't load the zoning data. Check your connection and reload the page."
+- **Link with overlays checked:** a link with Transit and State Lands checked shows both, and downloads only those two overlays' files.
+- **Regressions:** tooltips, the Honolulu panel's 2020–2024 numbers, and the bad-link cleanup still work.
 
-**Changes** (mostly in [scripts/map.js](scripts/map.js), plus a little markup and CSS):
-
-1. **Loaders return layers.**
-   - Each `loadX()` becomes an `async` function that fetches its file with `fetch` and `try/catch`, then returns its Leaflet layer instead of filling `overlays` itself.
-   - The transit loader fetches its two files in parallel with `Promise.all`.
-   - `loadSewer` stays as it is and still isn't called, per your keep-everything rule.
-2. **Load on first toggle.**
-   - A new `showOverlay(name)` downloads an overlay the first time it's checked and keeps it, so later toggles don't download it again.
-   - It only adds the layer to the map if the box is still checked when the file arrives.
-   - `hideOverlay(name)` removes it.
-   - The change handler and the restore-from-link code both use these, which removes the #5 crash.
-3. **Status messages.**
-   - **Overlays:** a status line under the **Overlays** heading says "Loading Waterways…" while a file downloads. If the download fails, it says "Couldn't load Waterways. Check your connection and try again." and unchecks the box. It's an `aria-live` region, so screen readers announce it.
-   - **Zoning data:** a message at the top of the map says "Loading zoning data…" until the zones appear, or shows an error if `final.geojson` fails.
-4. **CSS** for the messages in [style.css](style.css), using classes rather than inline styles.
-
-**Not changing:** what the overlays look like, the overlay list, Tachyons, or the jQuery used elsewhere (that's Feature 13).
-
-**How Claude will test it** (headless browser, old code vs. new):
-- **On a fresh visit:** none of the eight overlay files downloads, where the old code downloads all of them (about 17 MB).
-- **Toggling:**
-  - Checking each overlay downloads its file once and shows it. A second toggle doesn't download it again.
-  - Checking an overlay while its file is still downloading no longer throws, and the overlay appears when the file arrives.
-  - Unchecking it before the file arrives keeps it off.
-- **From a link:** a link with overlays checked (Feature 2) shows them after the page loads.
-- **Errors:**
-  - A blocked overlay file shows the error message and unchecks its box.
-  - A blocked `final.geojson` shows the zoning-data error.
-- **Regressions:** tooltips, the county panel, and URL round trips still work (Features 1–3b).
+- [ ] Open DevTools → **Network**, then reload. No overlay files (`hydro`, `federal-land`, `state-land`, `dhhl-land`, `rail-transit`, `house-districts`, `senate-districts`) download until you check an overlay.
+- [ ] Check **Waterways**. "Loading Waterways…" appears under the Overlays heading, then the overlay shows and the message goes away.
+- [ ] Uncheck and re-check **Waterways**. It comes back right away, with no second download in the Network tab.
+- [ ] Reload with DevTools → **Network** → throttling set to **Slow 4G**. "Loading zoning data…" shows at the top of the map until the zones appear. Set throttling back to **No throttling** afterwards.
+- [ ] Optional error check: in the Network tab, right-click `federal-land.min.geojson` and choose **Block request URL**, then check **Federal Lands**. The red error appears and the box unchecks. Unblock it afterwards.
 
 ---
 
-## Intro tour shows once (built, not committed yet)
+## Intro tour shows once (built and committed)
 
 **What changed:**
 - [scripts/map.js](scripts/map.js) saves an `hzaTourSeen` flag in localStorage when the tour is closed or finished, and skips the tour on later visits.
