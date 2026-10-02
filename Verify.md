@@ -6,6 +6,70 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
+## Feature 4: Load overlays only when they're turned on (planned, not built)
+
+- [ ] Review the plan, then approve or change it in chat.
+
+**Goal:**
+- Stop downloading about 17 MB of overlay files on every visit.
+- Fix the crash when an overlay is checked before its file has arrived (#5).
+- Give every data file a loading message and an error message (#28).
+
+**Today:**
+- **Every overlay downloads up front:** `initMap()` starts all seven overlay downloads right away ([map.js:829-836](scripts/map.js#L829-L836)), whether or not anyone turns them on. Waterways alone is 11.6 MB.
+- **Checking one too early crashes:** if you check an overlay before its file finishes, `overlays[value]` is still empty and the change handler throws ([map.js:206-213](scripts/map.js#L206-L213)).
+- **Failures are silent:** none of the downloads report a failure, so a missing file just looks like an empty map.
+
+**Changes** (mostly in [scripts/map.js](scripts/map.js), plus a little markup and CSS):
+
+1. **Loaders return layers.**
+   - Each `loadX()` becomes an `async` function that fetches its file with `fetch` and `try/catch`, then returns its Leaflet layer instead of filling `overlays` itself.
+   - The transit loader fetches its two files in parallel with `Promise.all`.
+   - `loadSewer` stays as it is and still isn't called, per your keep-everything rule.
+2. **Load on first toggle.**
+   - A new `showOverlay(name)` downloads an overlay the first time it's checked and keeps it, so later toggles don't download it again.
+   - It only adds the layer to the map if the box is still checked when the file arrives.
+   - `hideOverlay(name)` removes it.
+   - The change handler and the restore-from-link code both use these, which removes the #5 crash.
+3. **Status messages.**
+   - **Overlays:** a status line under the **Overlays** heading says "Loading Waterways…" while a file downloads. If the download fails, it says "Couldn't load Waterways. Check your connection and try again." and unchecks the box. It's an `aria-live` region, so screen readers announce it.
+   - **Zoning data:** a message at the top of the map says "Loading zoning data…" until the zones appear, or shows an error if `final.geojson` fails.
+4. **CSS** for the messages in [style.css](style.css), using classes rather than inline styles.
+
+**Not changing:** what the overlays look like, the overlay list, Tachyons, or the jQuery used elsewhere (that's Feature 13).
+
+**How Claude will test it** (headless browser, old code vs. new):
+- **On a fresh visit:** none of the eight overlay files downloads, where the old code downloads all of them (about 17 MB).
+- **Toggling:**
+  - Checking each overlay downloads its file once and shows it. A second toggle doesn't download it again.
+  - Checking an overlay while its file is still downloading no longer throws, and the overlay appears when the file arrives.
+  - Unchecking it before the file arrives keeps it off.
+- **From a link:** a link with overlays checked (Feature 2) shows them after the page loads.
+- **Errors:**
+  - A blocked overlay file shows the error message and unchecks its box.
+  - A blocked `final.geojson` shows the zoning-data error.
+- **Regressions:** tooltips, the county panel, and URL round trips still work (Features 1–3b).
+
+---
+
+## Intro tour shows once (built, not committed yet)
+
+**What changed:**
+- [scripts/map.js](scripts/map.js) saves an `hzaTourSeen` flag in localStorage when the tour is closed or finished, and skips the tour on later visits.
+- It uses Driver.js's `onReset` hook, which fires for both Close and Done. That's sturdier than watching for clicks inside `driver-popover-item`, because Driver.js rebuilds that popover at every step.
+- If storage is blocked, as in some private windows, the tour simply shows every time, like before.
+
+**Claude's checks** (headless Edge, fresh profile; all passed):
+- **Close:** on the first visit the tour shows. Clicking Close sets the flag, and after a reload there's no tour.
+- **Done:** removing the flag brings the tour back. Finishing it with Next through to Done (7 clicks) also sets the flag.
+- **Storage blocked:** the tour shows and closes normally, then comes back on reload. Nothing throws.
+
+- [ ] Close the tour, then reload. It doesn't come back.
+- [ ] To see it again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
+- [ ] Localhost and the live site keep separate storage, so you'll see the tour once on each.
+
+---
+
 ## Basemap key fix (built and committed)
 
 - [x] Key received in chat (2026-10-01). It works for both localhost and the live site.
