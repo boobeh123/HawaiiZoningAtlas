@@ -6,66 +6,64 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 7: Fix the broken filters in the data pipeline (planned, waiting for your approval)
+## Feature 7: Fix the broken filters in the data pipeline (built, not committed yet)
 
-- [ ] Approve this plan in chat.
+- [x] Plan approved in chat (2026-10-02).
 
-**Why:**
-- **Dead checkboxes:** nine sidebar checkboxes never match a single district.
-- **Wrong tooltips:** 135 tooltips claim a minimum home size, but no district has one.
+**What changed:**
+- [data-pipeline/CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb):
+  - **"Allowed Only After Public Hearing":** the spreadsheet's `Public Hearing` now maps to `AH`.
+  - **ADU checkboxes:** the three ADU column names are corrected, so "Allows Renters", "Allows Non-Family/Non-Employees", and "Not Restricted to Primary Structure" get data.
+  - **"No limit" answers:** blank, `NONE`, `None`, `No`, `N/A`, and `n/a` no longer count as a minimum unit size or an ADU size limit.
+  - **APrim:** a `None` answer to "restricted to only the primary structure?" now reads as `No`.
+  - **Flag formats:** the ADU size flag is written as `Yes`/`No`, which is what its checkbox sends.
+  - **GIS name aliases:** Maui's five `-MRA` districts map to the spreadsheet's `-WRA` rows, and Kauaʻi's `\` maps to `OS`.
+  - **Steady output:** blank cells are defined explicitly, the GIS files are read in sorted order, and the trim step selects pandas 3's text columns.
+- [data-pipeline/hawaii-zoning-data.csv](data-pipeline/hawaii-zoning-data.csv): the Maui `P` row gets `HI`, `Maui`, `Maui`, and Kauaʻi's `OD/PD` becomes `OS/PD`.
+- [data-pipeline/requirements.txt](data-pipeline/requirements.txt):
+  - **Pins:** versions for Python 3.13.
+  - **Added:** `nbclient` and `ipykernel`, so `jupyter execute CombineJurisdictions.ipynb` runs the notebook.
+  - **Dropped:** `rtree`. `flake8` is unchanged.
+- **Regenerated:** `data-pipeline/final.geojson`, `data-pipeline/final.csv`, and `data/final.geojson`. The two GeoJSON files are identical, so git stores them once.
+- [CLAUDE.md](CLAUDE.md): the run commands and the pipeline notes.
 
-The causes are in the notebook that builds `data/final.geojson`, plus two CSV cells and six GIS district names that don't match the spreadsheet. The details are under "Data questions" below.
+`index.html` and `scripts/map.js` didn't change for this feature. Your `index.html` edit, with House and Senate checked by default, is committed separately. The tests below ran without it. A separate load with it and the new data showed both overlays and 15 labels at the statewide view, with no errors.
 
-**A test run already passed.** A helper agent ran today's notebook, unchanged, on Python 3.13 with current libraries. Compared with the live file:
-- **Attributes:** the same, once the true/false flags are written as `1`/`0` again.
-- **Acreage:** the same.
-- **Shapes:** within about 2 m.
+- [ ] **Known issue from that edit:** a shared link can't turn House or Senate off. A link restores only the boxes it lists, and those two now start checked. So a link someone made with House off opens with House on. The fix is a small change to `setFilters()`: when a link has filters, start from every box unchecked.
 
-**What will change:**
-1. [data-pipeline/CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb):
-   - **"Allowed Only After Public Hearing":** map the spreadsheet's `Public Hearing` to `AH`, next to the existing `Special Permit` mapping.
-   - **ADU checkboxes:** correct the three column names, so "Allows Renters", "Allows Non-Family/Non-Employees", and "Not Restricted to Primary Structure" get data (`ARent`, `AFam`, `APrim`).
-   - **"No limit" spellings:** a requirement counts only if the cell holds a real value. Blank, `NONE`, `None`, `No`, `N/A`, and `n/a` all mean no limit. That fixes minimum unit size and ADU max size.
-   - **APrim `None`:** read it as `No`. All 48 `None` answers are in districts that allow ADUs, so it means "no restriction".
-   - **Flag formats:** write `ASize` as `Yes`/`No`, which is what the "No Maximum Size Limitation" checkbox sends. The minimum unit size flags stay `1`/`0`, which their checkboxes and the tooltip expect.
-   - **GIS name aliases:** a small table applied before the join. It maps Maui's five `-MRA` names to the spreadsheet's `-WRA` names, and Kauaʻi's `\` to `OS`. The GIS files come from the counties, so their names get mapped in code. The spreadsheet is the team's own, so its errors get fixed at the source (step 2).
-   - **Reading the CSV:** list the blank-cell markers explicitly. Newer pandas reads the text `None` as blank, which would erase the APrim answers.
-   - **Same output on any computer:** sort the GIS files so features always come out in the same order. Select `'str'` columns in the trim step, as pandas 3 asks.
-2. [data-pipeline/hawaii-zoning-data.csv](data-pipeline/hawaii-zoning-data.csv): two cell fixes.
-   - The Maui `P` row gets `HI`, `Maui`, `Maui`.
-   - Kauaʻi `OD/PD` becomes `OS/PD`.
-3. [data-pipeline/requirements.txt](data-pipeline/requirements.txt):
-   - **New pins:** the versions from the test run, which install on Python 3.13: pandas 3.0.6, geopandas 1.2.0, pyogrio 0.13.0, shapely 2.1.2, pyproj 3.8.0.
-   - **Add `nbclient` and `ipykernel`:** then `jupyter execute CombineJurisdictions.ipynb` runs the whole notebook.
-   - **Drop `rtree`:** geopandas no longer uses it, and version 1.0.1 has no Python 3.13 build.
-   - **Keep `flake8`** unless it fails to install.
-4. **Regenerated:** `data-pipeline/final.geojson`, `data-pipeline/final.csv`, and `data/final.geojson`, which is a straight copy, so git stores it once.
-5. [CLAUDE.md](CLAUDE.md): update the Notebook and Data pipeline notes. They cover the pins, the run command, the alias table, the "no limit" rule, and the flag formats. Drop the line saying the pipeline's `final.geojson` is stale.
+**Claude's checks** (all passed):
+- **Install:** `requirements.txt` installs cleanly in a fresh Python 3.13.5 environment. `jupyter execute` runs the notebook in 53 seconds.
+- **Repeatable:** running it in the repo produced files byte-identical to a run on a scratch copy.
+- **All four counties:** Hawaiʻi 114, Honolulu 35, Kauaʻi 55, and Maui 57, so 261 districts (it was 262). Kauaʻi's `\` polygon merged into Open Space, whose acreage grew by exactly that polygon's 41.29 acres.
+- **Old file vs. new file, district by district:** every change traces to a fix.
+  - **Public hearing:** 21 Kauaʻi districts changed from `Public Hearing` to `AH` for 1-family, and 14 each for 2-, 3-, and 4+-family.
+  - **Minimum unit size:** every "has a minimum" flag is now off. That's 130 for 1-family, 86 for 2-family, 78 each for 3- and 4+-family, and 135 for the tooltip's flag.
+  - **ADU size:** 68 false "has a size limit" flags were cleared, and 43 real limits stay `Yes`.
+  - **New data:** `ARent`, `AFam`, and `APrim`.
+  - **Newly joined:** 7 districts are Maui's five `-WRA` districts, Maui's Public Use, and Kauaʻi's Open Space/Project District.
+  - **Unchanged:** county, district name, zone type, acreage, lot-size ranges, elderly and affordable flags, and owner occupancy.
+  - **Shapes:** identical to the helper agent's checked run, with no invalid shapes. The live file had 2.
+- **Checkbox coverage:** every sidebar checkbox now matches at least one district, except ADU "Allowed Only After Public Hearing", which no county's ADU answer uses.
+- **Headless Edge, old data vs. new:** both runs used the same `index.html` and `map.js`, so only the data differed.
+  - **1-Family Housing on:** Kauaʻi went from 28 to 50 matching districts, and its panel went from 56.5% to 57.0%.
+  - **Plus "No Minimum Unit Size Requirement":** Hawaiʻi went from 0 districts to 69, and its panel from 0.0% to 2.7%. Honolulu went from 3 to 19, and Maui from 2 to 30.
+  - **ADU sub-filters, one at a time:** Allows Renters went from 0 districts to 128, Allows Non-Family/Non-Employees from 0 to 103, Not Restricted to Primary Structure from 0 to 130, and No Maximum Size Limitation from 0 to 90.
+  - **Tooltips:** Hawaiʻi's Single-Family Residential - 10,000 square feet no longer says "Requires a Minimum Home Size". Wailuku's Commercial Mixed Use - WRA shows its name and color instead of gray "Not Zoned".
+  - **Shared link:** a link with Allows Renters and No Maximum Size Limitation restores both boxes and matches 82 districts. With the old data it matched 0.
+  - **Errors:** none in either run, whether exceptions, console errors, or failed requests.
 
-No changes to `index.html` or `scripts/map.js`: every fix produces the values the checkboxes already send.
-
-**What changes on the map:**
-- **Kauaʻi:** 21 districts that allow 1-family homes only after a public hearing now count when "Allowed Only After Public Hearing" is checked, which it is by default. So Kauaʻi's percentages go up.
-- **Minimum unit size:** no tooltip says "Requires a Minimum Home Size", and the "No Minimum Unit Size Requirement" boxes stop graying districts out.
-- **ADU sub-filters:** they stop graying out the whole map.
-- **Newly joined districts:** 41 Maui polygons (the Wailuku redevelopment districts and Public Use) and two Kauaʻi polygons get their colors and names instead of "Not Zoned". The district count drops from 262 to 261, because `\` merges into `OS`.
-- **Still matches nothing:** "Allowed Only After Public Hearing" under ADUs. That's the data: no county's ADU answer is "Public Hearing".
-- **Invisible side effects:** outlines shift by up to about 2 m, the live file's 2 invalid shapes come out valid, and counties come out in alphabetical order.
-
-**What stays as it is:**
-- **Coordinate precision:** the live file was never rounded. Shrinking it is Feature 9.
-- **Hawaiʻi's agricultural coding:** see the recommendation below.
-
-**How Claude will check it:**
-- **Old file vs. new file:** list every property that changed, and confirm each one traces to a fix above.
-- **Checkbox coverage:** every checkbox name and value in `index.html` should match at least one district, except ADU "Allowed Only After Public Hearing".
-- **Headless Edge, old data vs. new:**
-  - filter counts
-  - Kauaʻi's percentage
-  - tooltips: a Hawaiʻi district without the minimum-size line, and a Maui `-WRA` district with its name
-  - no console errors
+**Your checks.** Open each link in a new tab, or press F5 after pasting it:
+- [ ] Open http://localhost:8000/#15/19.96332/-155.78734 (Waikoloa Village). Hover the purple district in the middle. The tooltip says SINGLE-FAMILY RESIDENTIAL - 10,000 SQUARE FEET and Hawaii, with no "Requires a Minimum Home Size" line.
+- [ ] Turn on **1-Family Housing** and click that district. The panel says 2.7% of Hawaii. Now check **No Minimum Unit Size Requirement**. It stays at 2.7%. Before this fix, it dropped to 0.0%.
+- [ ] Open http://localhost:8000/#16/21.92291/-159.52101 and turn on **1-Family Housing**. The purple district in the middle stays purple. Hover it: RESIDENTIAL (4 UNITS/ACRE)/SPECIAL TREATMENT - PUBLIC. Before this fix, it turned gray. Click it: the panel says 57.0% of Kauai.
+- [ ] Open http://localhost:8000/#16/20.88754/-156.50056 (downtown Wailuku). The blocks around Main Street are colored, not gray. Hover the middle: COMMERCIAL MIXED USE - WRA, Maui.
+- [ ] Turn on **Accessory Dwelling Units** and check **Allows Renters**. Districts stay colored. Before this fix, the whole map went gray. Uncheck it and try **Allows Non-Family/Non-Employees**, **Not Restricted to Primary Structure**, and **No Maximum Size Limitation** one at a time.
+- [ ] With DevTools open (F12, Console tab), reload the page. No red errors.
+- [ ] Optional, after the commit: run the notebook yourself from `data-pipeline/` (see CLAUDE.md, Notebook). Afterwards, `git status` shows no changes to `final.geojson`, which means your machine produces the same file.
 
 **Your follow-up:** make the same two cell fixes in the Google Sheet, so the next export keeps them. Feature 8 depends on it.
+- [ ] Maui `P` (Public Use) row: State `HI`, Jurisdiction `Maui`, County `Maui`.
+- [ ] Kauaʻi `OD/PD`: change to `OS/PD`.
 
 ---
 
@@ -97,7 +95,7 @@ One decision for you:
 - [x] **Kauaʻi `OS/PD`:** the GIS calls it "Open Space/Project District", and so does the spreadsheet's `OD/PD` row, so the sheet's abbreviation is a typo.
 - [x] **Kauaʻi polygon `\`:** the GIS calls it "Open Space", so it's a typo for `OS`.
 
-**Fixable without new research** (this becomes part of Feature 7):
+**Fixed in Feature 7** (no new research needed):
 - **Maui `P` (Public Use):** the row exists in both the master and the CSV, but its State, Jurisdiction, and County cells are blank, so its 6 polygons can't join and show as "Not Zoned". The fix is filling in `HI`, `Maui`, `Maui`. *(Correction: Claude first reported it as missing from the CSV.)*
 - **"Public Hearing" is the value the researchers used**, and no row says "Special Permit". The pipeline only maps "Special Permit", which is why "Allowed Only After Public Hearing" matches nothing.
 - **The three ADU occupancy columns** exist as "ADU Renter Occupancy Prohibited", "ADU Employee or Family Occupancy Required", and "ADU Restricted to Only Primary Structure …". The notebook looks for different names, so it drops them.
