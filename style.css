@@ -155,6 +155,39 @@ hr {
   margin-top: 5px;
 }
 
+/* House and Senate district labels. They ignore the mouse (Leaflet tooltips
+   do by default), so clicks still reach the zones underneath. The !important
+   beats the zone tooltips' white-space rule above. */
+.leaflet-tooltip.districtLabel {
+  width: auto;
+  white-space: nowrap !important;
+  padding: 1px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 9px;
+  box-shadow: none;
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+/* Filled with each overlay's line color: black text is 6.8:1 on the pink
+   and 18:1 on the yellow */
+.leaflet-tooltip.houseLabel {
+  background-color: #e06aaa;
+}
+
+.leaflet-tooltip.senateLabel {
+  background-color: #f8f807;
+}
+
+/* Hidden while the label has no room on screen (see updateDistrictLabels).
+   visibility, not display: Leaflet centers each label using its size, and a
+   display: none label has no size, so it would drift off its spot. */
+.leaflet-tooltip.districtLabelHidden {
+  visibility: hidden;
+}
+
 #driver-popover-item {
   max-width: 450px !important;
 }
