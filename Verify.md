@@ -6,7 +6,78 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 4: Load overlays only when they're turned on (built, not committed yet)
+## Data questions from the master spreadsheet (for you to check at the source)
+
+Claude compared `Hawaii Zoning Atlas Master.xlsx` with the CSV the map was built from, and with the GIS files. The spreadsheet itself holds up: for every column that feeds the map, it matches the CSV, apart from rounding and one missing Maui district.
+
+The odd numbers come from three other places:
+1. **A methodology choice** about farm dwellings, recorded in the **Discrepancies** tab.
+2. **Pipeline mapping bugs**, which are fixable in Feature 7.
+3. **District names that differ between the GIS files and the spreadsheet.** Those districts show as "Not Zoned".
+
+These need the source zoning code or your data-entry files:
+
+- [ ] **Hawaiʻi County agricultural districts** (A-1a … A-200a): every row says 1-family *Prohibited* but ADU *Allowed*.
+  - **The researchers' rule:** the Discrepancies tab says farm dwellings aren't counted as 1-family housing.
+  - **What to check:** does Hawaiʻi County's code also allow ordinary single-family dwellings there? If so, 1-family should be *Allowed/Conditional*.
+  - **Why it matters:** these districts are most of the county's zoned land, which is where "1-family allowed on only 2.7%" comes from.
+- [ ] **Maui `-MRA` vs. `-WRA`:** confirm that the GIS districts `CMU-MRA`, `BMF-MRA`, `RES-MRA`, `MF-MRA`, and `P/QP-MRA` are the spreadsheet's `CMU-WRA` … `P/QP-WRA` (Wailuku Redevelopment Area). Together they're about 35 polygons, all showing as "Not Zoned" today.
+- [ ] **Maui `PR` (25 polygons) and `DR` (10 polygons)** are in the GIS but have no spreadsheet row. What districts are they? The spreadsheet has `PD` (Project District) and the named PDs, but nothing called `PR` or `DR`.
+- [ ] **Maui `BRW`, `UZR`, and `NZ`:** confirm these are unzoned (breakwater, unzoned, no zoning).
+- [ ] **Kauaʻi `OD/PD`:** the spreadsheet row is named "Open Space/Project District", so it's probably a typo for `OS/PD`, which is what the GIS uses.
+- [ ] **Kauaʻi GIS polygon named `\`:** what district should it be?
+
+**Fixable without new research** (this becomes part of Feature 7):
+- **Maui `P` (Public Use)** is in the master but missing from the CSV, so 6 polygons show as "Not Zoned". Refreshing the CSV from the master fixes it.
+- **"Public Hearing" is the value the researchers used**, and no row says "Special Permit". The pipeline only maps "Special Permit", which is why "Allowed Only After Public Hearing" matches nothing.
+- **The three ADU occupancy columns** exist as "ADU Renter Occupancy Prohibited", "ADU Employee or Family Occupancy Required", and "ADU Restricted to Only Primary Structure …". The notebook looks for different names, so it drops them.
+- **ADU max size writes "no limit" five ways:** blank, `N/A`, `NONE`, `None`, `No`. The pipeline counts every non-blank value, including `NONE`, as having a limit.
+- **Tooltip Notes are empty in every county,** which is why no tooltip ever shows a note. **Special Notes** are filled in for some districts, for example the farm-dwelling note on Hawaiʻi County's agricultural rows. Showing those instead would be a content decision for you.
+
+**Checked and correct:** Honolulu's 3-family-but-not-1-family districts are real zoning, not errors: BMX-4 downtown, Kakaʻako Mixed Use, and Waikīkī Resort Mixed Use allow apartments but not detached houses.
+
+**About the file itself:** the workbook includes team members' names (Jurisdiction Information, Analysts, and the Discrepancies "Question for" column). Keep it out of the public repo.
+
+---
+
+## Feature 5: Label the House and Senate districts (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-01). You chose labels like "House 23" over "H23".
+
+**What changed** (in [scripts/map.js](scripts/map.js) and [style.css](style.css)):
+- **Labels:** each district gets a chip reading "House 23" or "Senate 12", filled with its overlay's line color, pink or yellow, with black text. Labels ignore the mouse, so clicks reach the zones underneath.
+- **Placement:** each label sits at the center of the district's largest piece. House 35 is curved enough that its center falls outside it, so its label falls back to the middle of the widest part of the shape.
+- **Only where there's room:** a label shows only if its district has room on screen and it doesn't overlap a label already showing. Larger districts go first. Labels are rechecked after every zoom, so they appear as you zoom in.
+- **Popups:** the district popups that could never open are gone.
+
+**Two bugs Claude found and fixed while testing:**
+- **Labels vanished after a click:** they disappeared after the first click anywhere on the map. Leaflet closes tooltips not marked `permanent` on any map click in browsers with pointer events, which is every modern one. Fixed with `permanent: true`.
+- **Labels drifted after a zoom:** hidden labels came back about 35 px off their spot. Leaflet centers each label using its size, and a `display: none` element has no size. Fixed by hiding with `visibility: hidden`.
+
+**Claude's checks** (headless Edge, old code vs. new; all passed):
+- **Old code:** a real click on a district opens nothing, confirming #6.
+- **Labels by zoom:** House labels showing at zooms 9, 10, 11, 12, and 13 were 13, 27, 43, 50, and 51, so every district is labeled at zoom 13.
+- **Every zoom:**
+  - No two labels overlap.
+  - Every label is centered on its spot within 1 px.
+  - Every label sits inside its own district.
+- **Both overlays on:**
+  - House and Senate labels show together. At zoom 11 that's 28 House and 24 Senate.
+  - None overlap.
+- **Click-through:** a real mouse click on "House 18" went through to the zone and opened Honolulu's panel.
+- **Turning House off:** removes its labels and leaves Senate's.
+- **Links:** a link with House checked shows its labels once the page loads.
+- **Regressions:** none.
+
+- [ ] Turn on **House District**. A few labels show at the statewide view. Zoom in on Honolulu and more appear, and they never overlap.
+- [ ] Click a zone right through a label. The county panel opens.
+- [ ] Click a few more places on the map. The labels stay. This was the first bug.
+- [ ] Also turn on **Senate Districts**. Yellow labels join the pink ones without overlapping.
+- [ ] Turn **House District** off. Its labels disappear, and the Senate labels stay.
+
+---
+
+## Feature 4: Load overlays only when they're turned on (built and committed)
 
 - [x] Plan approved in chat (2026-10-01).
 
