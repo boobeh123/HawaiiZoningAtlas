@@ -85,16 +85,23 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()` and `calculateActiveArea()` do. Never build it from HTML strings.
 - **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
-- **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`.
+- **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`. They also carry the `main-in-group` class, so check `name !== 'Overlay'` whenever code means "housing filters".
+- **Clear filters.** The ✕ (`#resetFilters`) is a `<button>`.
+  - **`clearFilters()`:** unchecks every housing filter group and clears the county from the map, the form, and the URL. Then it dispatches one `change` on the form, so the usual update runs. Overlays and opacity stay as they are.
+  - **`updateResetButton()`:** shows the ✕ only while a housing filter or a county is active.
+  - **Hiding:** it hides the ✕ with the `hidden` attribute, not Tachyons `dn`. Google's `.material-icons` sets `display: inline-block` and loads later, so it beats `dn`. `#resetFilters[hidden]` in `style.css` wins by ID.
 - **Property keys.**
   - `T`: county.
   - `Z`: full district name.
   - `Ty`: zone type `R`/`M`/`N` (null means not zoned), mapped to colors by `zone2color`.
   - `MA`: municipal acres, i.e. zone area minus federal/state land. Feeds the area calculator.
   - `TN`: tooltip note. `AHD`, `EHD`, and `MUS` are tooltip flags.
-- **County selection.** Clicking a zone selects its county. Each `T` value should match two things:
-  - a `name20` in `counties.geojson`, for the outline highlight
-  - a key in `demographics` (`Hawaii`, `Honolulu`, `Kauai`, `Maui`, no ʻokina), for the stats row. Without a match, the panel leaves the stats out.
+- **County selection.** Clicking a zone selects its county.
+  - **Outline:** `drawCountyOutlines()` restyles the outlines. The selected county gets 5px cyan (`#00e5ff`, used by no other layer) and goes on top, and the rest get 2px faint white.
+  - **Pane:** the outlines live in the `countyOutlines` pane (z-index 502), just above the `overlays` pane (501) that holds the House and Senate lines.
+  - **Matching:** each `T` value should match two things:
+    - a `name20` in `counties.geojson`, for the outline highlight
+    - a key in `demographics` (`Hawaii`, `Honolulu`, `Kauai`, `Maui`, no ʻokina), for the stats row. Without a match, the panel leaves the stats out.
 - **URL state.** The hash is `#zoom/lat/lng/<serialized form>`.
   - `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment. Don't replace it with the upstream library.
   - `updateUrl()` writes the filter part with `getFormParams()`, which is `URLSearchParams` over `FormData`. That's the same format jQuery's `serialize()` produced.
