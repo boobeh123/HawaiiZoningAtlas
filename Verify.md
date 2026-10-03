@@ -39,7 +39,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 **Your checks:**
 - [ ] Open http://localhost:8000 in a new tab. With no filters on, there's no ✕ beside "Permitted Residential Uses".
 - [ ] Turn on **1-Family Housing** and click Oʻahu. The ✕ appears, and Oʻahu gets a thick cyan outline over the yellow Senate lines.
-- [ ] Click the ✕. The filters clear, the area panel closes, the cyan outline goes away, and House and Senate stay on.
+- [x] Click the ✕. The filters clear, the area panel closes, the cyan outline goes away, and House and Senate stay on.
 - [ ] Press F5. Oʻahu stays unselected.
 - [ ] Turn on **2-Family Housing**, press Tab until the ✕ has a focus ring, then press Enter. The filters clear.
 
@@ -76,7 +76,7 @@ No HTML changes.
 - **Reduced motion:** animations drop to nothing, and zooming still works.
 
 **Your checks.** On your computer, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M). After a push, you can also use your phone on the live site.
-- [ ] Pick a phone, such as iPhone SE. Reload. The map shows every island, and the sidebar is a panel underneath it that scrolls.
+- [ ] In the device toolbar's device list, pick **iPhone SE**. It's a built-in preset, so no actual iPhone is needed, and your own phone on the live site works too. Reload. The map shows every island, and the sidebar is a panel underneath it that scrolls.
 - [ ] Turn on **1-Family Housing** in the panel, then tap Oʻahu. The area panel appears across the top of the map, and the zoom buttons stay clear.
 - [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. Every popover fits on screen.
 - [ ] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
@@ -101,7 +101,7 @@ No HTML changes.
 
 **Your checks.** Open each link in a new tab:
 - [ ] Open http://localhost:8000. House and Senate are on.
-- [ ] Uncheck **House District**, copy the URL, and open it in a new tab. House stays off and Senate stays on.
+- [x] Uncheck **House District**, copy the URL, and open it in a new tab. House stays off and Senate stays on.
 - [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. After a few seconds, the URL ends in `/townActive=&opacity=90`, and House and Senate are off.
 
 ---
@@ -178,7 +178,8 @@ The odd numbers come from three other places:
 
 One decision for you:
 
-- [ ] **Hawaiʻi County agricultural districts** (A-1a … A-8000a): every row says 1-family *Prohibited* but ADU *Allowed*. **Claude checked the code: this is a deliberate choice, not a typo.**
+- [x] **Hawaiʻi County agricultural districts** (A-1a … A-8000a): every row says 1-family *Prohibited* but ADU *Allowed*. **Claude checked the code: this is a deliberate choice, not a typo.**
+  - **Your decision (2026-10-02):** keep the researchers' coding, and add a feature that shows the spreadsheet's Special Notes in the tooltips. Re-checking against the latest zoning code stays an option for later.
   - **Why it matters:** these districts are most of the county's zoned land, which is where "1-family allowed on only 2.7%" comes from.
   - **The county code allows a house** (chapter 25, January 2026 edition; the county site blocks scripts, so Claude read [an archived copy](http://web.archive.org/web/20260902090202/https://www.hawaiicounty.gov/home/showdocument?id=302520)):
     - **§25-5-72(a)(11)** permits "Dwelling, single-family, as permitted under chapter 205, Hawai‘i Revised Statutes and as permitted under section 25-5-77(b)."
@@ -240,11 +241,11 @@ One decision for you:
 - **Links:** a link with House checked shows its labels once the page loads.
 - **Regressions:** none.
 
-- [ ] Turn on **House District**. A few labels show at the statewide view. Zoom in on Honolulu and more appear, and they never overlap.
-- [ ] Click a zone right through a label. The county panel opens.
-- [ ] Click a few more places on the map. The labels stay. This was the first bug.
-- [ ] Also turn on **Senate Districts**. Yellow labels join the pink ones without overlapping.
-- [ ] Turn **House District** off. Its labels disappear, and the Senate labels stay.
+- [x] Turn on **House District**. A few labels show at the statewide view. Zoom in on Honolulu and more appear, and they never overlap.
+- [x] Click a zone right through a label. The county panel opens.
+- [x] Click a few more places on the map. The labels stay. This was the first bug.
+- [x] Also turn on **Senate Districts**. Yellow labels join the pink ones without overlapping.
+- [x] Turn **House District** off. Its labels disappear, and the Senate labels stay.
 
 ---
 
@@ -292,7 +293,7 @@ One decision for you:
 - **Done:** removing the flag brings the tour back. Finishing it with Next through to Done (7 clicks) also sets the flag.
 - **Storage blocked:** the tour shows and closes normally, then comes back on reload. Nothing throws.
 
-- [ ] Close the tour, then reload. It doesn't come back.
+- [x] Close the tour, then reload. It doesn't come back.
 - [ ] To see it again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
 - [ ] Localhost and the live site keep separate storage, so you'll see the tour once on each.
 
