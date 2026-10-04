@@ -65,7 +65,9 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
 - **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
-  - **Phones (600px and narrower):** the map takes the top `--phoneMapHeight` (55dvh) of the screen, and `#sidebar` is a scrolling panel under it. `initMap()` uses the same breakpoint to start phones at zoom 6.
+  - **Phones (600px and narrower):** the map takes the top `--phoneMapHeight` (55dvh) of the screen, and `#sidebar` is a scrolling panel under it.
+    - **Same breakpoint in JS:** `phoneMediaQuery` in `map.js`. `initMap()` uses it to start phones at zoom 6.
+    - **The area panel:** it's capped at 40% of the map's height and scrolls as one box, with the tapped district first (flex `order`). `#activeAreaCalculator:not(.dn)` keeps Tachyons' `dn` able to hide it.
   - **601–1139px:** the area panel moves beside the sidebar. A centered panel would overlap it.
   - **Tour popovers on phones:** they're pinned across the top with `!important`, because Driver.js positions them inline and `driver.min.css` loads after `style.css`.
 - **Data loading.** `initMap()` calls `loadMapData()`, which uses `fetch` to get `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). `#mapStatus` shows "Loading zoning data…" until the zones arrive, or an error if they don't.
@@ -80,7 +82,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - **Two Leaflet traps:**
     - **`permanent: true`:** these labels need it, or Leaflet closes them on any map click.
     - **Hiding:** hidden labels use `visibility: hidden`, not `display: none`. Leaflet centers tooltips using their size, and a `display: none` label has no size, so it drifts off its spot.
-- **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()` and `calculateActiveArea()` do. Never build it from HTML strings.
+- **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()`, `buildDistrictDetails()`, and `calculateActiveArea()` do. Never build it from HTML strings. Some Special Notes contain `<`.
 - **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
 - **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`. They also carry the `main-in-group` class, so check `name !== 'Overlay'` whenever code means "housing filters".
@@ -93,8 +95,13 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `Z`: full district name.
   - `Ty`: zone type `R`/`M`/`N` (null means not zoned), mapped to colors by `zone2color`.
   - `MA`: municipal acres, i.e. zone area minus federal/state land. Feeds the area calculator.
-  - `TN`: tooltip note. `AHD`, `EHD`, and `MUS` are tooltip flags.
-- **County selection.** Clicking a zone selects its county.
+  - `TN`: tooltip note. It's empty everywhere. `AHD`, `EHD`, and `MUS` are tooltip flags (`getZoneFlags()`).
+  - `SN`: the spreadsheet's Special Notes, as free text, so render it only as text. The tooltip shows `shortenNote()`'s ~160-character preview, and the area panel shows the full note.
+- **Tooltips.** `syncZoneTooltips()` binds the hover tooltips. It skips them where `noTooltipsQuery` matches: phones, or touch-only screens (`hover: none`). There a tooltip covers much of the map, and the area panel shows the same details. It re-syncs when the query changes.
+- **County selection.** Clicking a zone selects it (`districtActive`) and its county (`townActive`).
+  - **Panel:** `buildDistrictDetails()` adds the district's name, flags, and full note to the area panel.
+  - **Clicking:** another district in the same county switches the panel without moving the map. Clicking the same district again clears both.
+  - **Zoom:** `showCounty()` handles a newly selected county. Desktop fits the whole county; phones only zoom in, never out.
   - **Outline:** `drawCountyOutlines()` restyles the outlines. The selected county gets 5px cyan (`#00e5ff`, used by no other layer) and goes on top, and the rest get 2px faint white.
   - **Pane:** the outlines live in the `countyOutlines` pane (z-index 502), just above the `overlays` pane (501) that holds the House and Senate lines.
   - **Matching:** each `T` value should match two things:
@@ -125,7 +132,8 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 3. **GIS input.** The notebook reads every `data-pipeline/gis/*.gpkg`, sorted, so features come out in the same order on any machine.
    - **Columns:** each file needs `State`, `Jurisdiction`, `AbbreviatedDistrict`, and geometry. The README's mention of `FullDistrictName` is outdated.
    - **Load errors:** a file that fails to load only prints "Error when reading …", and its county silently drops out of the output.
-   - **Name aliases:** `gis_district_aliases` maps GIS names that differ from the spreadsheet's before the join: Maui's `-MRA` districts to the sheet's `-WRA`, and Kauai's `\` to `OS`. The GIS files come from the counties, so their names get mapped in code. Fix spreadsheet typos in the CSV itself, and in the Google Sheet so the next export keeps them.
+   - **Name aliases:** `gis_district_aliases` maps GIS names that differ from the spreadsheet's before the join: Maui's `-MRA` districts to the sheet's `-WRA`, and Kauai's `\` to `OS`. The GIS files come from the counties, so their names get mapped in code. Spreadsheet problems are fixed in `pull_sheet.py` (see Source), since the sheet itself stays untouched.
+   - **Special Notes:** the notebook drops the researchers' own reminders (`internal_notes`, starting with "missing MG10"). It also copies A-100a's "For all Agricultural Districts…" note to the other Hawaii `A-` districts that have no note.
 4. **Join.** `create_id()` links GIS features to spreadsheet rows on `HI--<JURISDICTION>--<DISTRICT>`, uppercased, with `-` and spaces stripped from the district. A district that doesn't match ends up with null attributes, and the map draws it as Not Zoned.
 5. **Acreage.** Areas are computed in EPSG:6933. Federal/state land (`federal-state-dissolve.geojson`) is subtracted to get `MunicipalAcres`, which becomes `MA`.
 6. **Output.**
