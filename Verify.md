@@ -6,7 +6,64 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 8: Revive the spreadsheet sync (built, not committed yet)
+## Special Notes in the tooltips and the area panel (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-04), with all three recommendations.
+  - **Notes:** a preview in the tooltip, and the full note in the panel.
+  - **The farm-dwelling note:** copied to all 20 agricultural districts.
+  - **Researcher notes:** hidden.
+- [x] **Added at your request:** no tooltips on phones. Phones never zoom out, while desktop keeps fitting the county.
+
+**What changed:**
+- [CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb):
+  - **New property:** Special Notes reach the map as `SN`, adding 43 KB to `final.geojson`.
+  - **Researcher notes:** "missing MG10" is dropped.
+  - **The farm-dwelling note:** A-100a's note is copied to the other 19 Hawaiʻi A- districts.
+  - **Regenerated:** both `final.geojson` copies and `final.csv`.
+- [scripts/map.js](scripts/map.js):
+  - **Tooltip:** a ~160-character note preview. When a note is cut, "Click the district for the full note" follows it.
+  - **Panel:** clicking a district adds its name, flags, and full note under the county stats.
+  - **Clicking:** another district in the same county switches the note without moving the map. Clicking the same district again closes the panel.
+  - **Phones and touch-only screens:** no district tooltips. The panel shows the details instead.
+  - **Phones only:** a tap zooms in to the county from a wider view and never zooms out. Desktop still fits the whole county.
+- [style.css](style.css):
+  - **Long notes:** they scroll inside the panel.
+  - **On phones:** the panel takes at most 40% of the map's height, and the tapped district comes first.
+- **Docs:** CLAUDE.md and the README.
+
+**Claude's checks** (headless Edge, old code and data vs. new; all passed, no errors):
+- **Data:** only the new `SN` property changed, across all 261 districts.
+  - **Notes on the map:** 161 districts have a note.
+  - **The farm-dwelling note:** all 20 Hawaiʻi agricultural districts carry it.
+  - **"missing MG10":** it's gone.
+  - **`check_data.py`:** it passes.
+- **Tooltips:** Honolulu's Residential - 5,000 sf (a 606-character note) shows a clean preview plus the click hint. Kauaʻi's Industrial Limited shows its whole short note with no hint.
+- **The panel:**
+  - **Clicking Residential - 5,000 sf:** shows its exact full note.
+  - **Clicking Apartment - Low-Density:** in the same county, this switches the note without moving the map. Its note contains a `<`, which shows as text, not markup.
+  - **Clicking it again:** closes the panel.
+  - **A-20a and MG-1a:** A-20a shows the farm-dwelling note, and MG-1a shows "No notes for this district".
+  - **Clear filters:** closes the panel.
+- **Zoom:**
+  - **Desktop:** from zoom 13 in Wailuku, a click still fits Maui at zoom 10.
+  - **Phone, from zoom 13:** a tap stays at 13. The old code jumped out to zoom 8.
+  - **Phone, from zoom 7:** a tap zooms in to Honolulu.
+- **Phones and touch screens:**
+  - **No tooltips:** none on a 375px phone, or on a 1,024px touchscreen.
+  - **Panel size:** on the phone, it ends at 157 of the map's 367 pixels, so the middle stays free to tap.
+- **Regressions:**
+  - **Feature 6 checks:** all 14 unchanged.
+  - **Mobile layout checks:** unchanged apart from panel heights. Panels are taller where a district note now shows, and shorter on phones with the new cap.
+
+**Your checks:**
+- [X] On desktop, open http://localhost:8000/#13/21.33752/-157.86051 in a new tab. Hover the district in the middle. The tooltip ends with "…" and "Click the district for the full note".
+- [X] Click it. The panel shows "Residential - 5,000 sf" and the whole note, scrolling if needed. Now click a neighboring Honolulu district. The note changes and the map doesn't move.
+- [X] Open http://localhost:8000/#13/19.4504/-155.72565 and click the district in the middle (A-20a). The note begins "For all Agricultural Districts…".
+- [X] In DevTools' device toolbar, pick iPhone SE and reload. Zoom in close on a town and tap a district. No tooltip appears, the map doesn't zoom out, and the panel at the top starts with that district's name and note.
+
+---
+
+## Feature 8: Revive the spreadsheet sync (built and committed)
 
 - [x] Plan approved in chat (2026-10-03).
   - **Decisions:** the master stays untouched, changes push straight to `main` on your repo, and the sync runs weekly plus a button.
@@ -52,7 +109,8 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - **`data-pipeline/README.md`:** every step works exactly as written, in your `~/hza` environment.
 
 **Your checks:**
-- [ ] After the push, open your repo on GitHub → **Actions** → **Pull and Validate Spreadsheet Data** → **Run workflow**. It finishes green, and the "Check whether the spreadsheet changed" step says "The spreadsheet hasn't changed, so there's nothing to push."
+- [x] After the push, open your repo on GitHub → **Actions** → **Pull and Validate Spreadsheet Data** → **Run workflow**. It finishes green, and the "Check whether the spreadsheet changed" step says "The spreadsheet hasn't changed, so there's nothing to push."
+  - Your run on 2026-10-04 passed in 21 seconds. It pulled and validated the sheet, found no changes, and skipped the rebuild and push. That also shows the CSV comes out byte-identical on GitHub's Linux servers.
 - [ ] Optional, in Git Bash from `data-pipeline/`: `~/hza/Scripts/python pull_sheet.py`. It prints "No changes", and `git status` stays clean.
 
 ---
