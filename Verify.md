@@ -6,6 +6,108 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
+## Feature 12: A filters drawer and a compact area card on phones (built on a branch, not on `main` yet)
+
+- [x] Started 2026-10-04 in a Claude Code cloud session, from your request to pick up where we left off. It follows the plan that was here, with the changes listed below.
+
+**Where it is:** the `claude/brave-meitner-ipdy2j` branch on your GitHub repo. Nothing is on `main`, so the live site hasn't changed.
+- **To try it:** run `git fetch origin` and `git checkout claude/brave-meitner-ipdy2j`, then run the site locally.
+- **To ship it:** merge the branch into `main`. That deploys. Or ask Claude to open a pull request.
+
+**Before, on a 375×667 phone:** the map got the top 367 px. The sidebar always took the bottom 300 px, and a tapped district's panel covered another 147 px of the map.
+
+**Now (phones, 600px and narrower; desktop and tablets unchanged):**
+
+```
+Nothing selected            District tapped             Drawer open
+┌──────────────────────┐    ┌───────────────────┐[+]   ┌───────────────────┐[+]
+│                  [+] │    │ 56.8% of Honolulu ▾│[−]   │ 56.8% of Honolulu ▾│[−]
+│                  [−] │    │ Residential - 5,000│      ├────── map ────────┤
+│     full-screen      │    │ PD-H PRDs are all… │      ├───────────────────┤
+│        map           │    └───────────────────┘      │ ▾ Filters & overlays│
+│                      │         full-screen map       │   (scrolls inside)  │
+│            [Map/Sat] │               [Map/Sat]       │                     │
+├──────────────────────┤    ├──────────────────────┤   │                     │
+│ ▴ Filters & overlays │    │ ▴ Filters & overlays │   │                     │
+└──────────────────────┘    └──────────────────────┘   └─────────────────────┘
+```
+
+| On a 375×667 phone | Before | Now |
+|---|---|---|
+| Map | top 367 px | top 619 px, everything above the bar |
+| Filters | always the bottom 300 px | a 48 px bar; open, 467 px (70%) |
+| Tapped district | a 147 px panel | a 96 px card; 248 px at most when expanded |
+
+**Changed from the plan:**
+- **The map stops at the bar** instead of running under it. That keeps the Map/Satellite switch and the credits above the bar without moving them.
+- **The drawer grows instead of sliding.** It looks the same, but the tour's library turns off slide animations on the parents of whatever it highlights, so a sliding drawer would jump during the tour.
+- **During the tour the drawer opens lower,** at 45% of the screen (the old panel's height), so the tour's popovers keep their room at the top. Each step's element sits as low in the drawer as it fits, away from the popover.
+- **Added after testing** (see Claude's checks):
+  - **Stray taps:** the tour changes steps the moment your finger touches Next, so the tap's click used to land on whatever the next step put under your finger. On a phone that could be the drawer's bar or a district. Now that one click is ignored.
+  - **The tour and the bar:** the bar does nothing while the tour runs.
+  - **Rotation:** turning the phone mid-tour keeps the drawer right.
+  - **Overlay messages:** a message like "Couldn't load House District" is still announced by screen readers while the drawer is closed.
+  - **Keyboard:** while the drawer is open, keyboard focus skips the map controls it covers.
+  - **Narrow phones:** on the narrowest phones (280 px), the bar stays on one line.
+  - **The card's touch target:** its whole top edge is a full-size touch target.
+  - **Tour wording:** on phones the tour says "the Filters & overlays panel" instead of "the menu on the left-hand side".
+
+**What changed:**
+- [index.html](index.html):
+  - **The drawer's bar:** a `<button>` with `aria-expanded`.
+  - **A hidden status line** outside the drawer, for screen readers.
+- [scripts/map.js](scripts/map.js):
+  - **The drawer:** `setDrawerOpen()`, and the filter count with `countHousingFilters()`, which the Clear filters button now shares.
+  - **The card:** its header button, `buildAreaCardToggle()`.
+  - **The tour:** `showTourStep()` and the stray-tap guard.
+- [style.css](style.css): the phone media query, and three new variables on `:root` (`--drawerBarHeight`, `--drawerOpenHeight`, `--drawerTourHeight`). `--phoneMapHeight` is now the screen minus the bar.
+- **Docs:** CLAUDE.md and the README. Both also say about 3.0 MB for the map data now, which is what your Feature 9 check measured on the live site.
+
+**Claude's checks** (headless Chromium, old code vs. new, with the CDNs served locally because this cloud session can't reach them; blank basemap):
+- **Round 1:** six independent testers each took one area: desktop and tablets, the drawer and accessibility, the card, the tour, earlier features, and a code review. Skeptics then tried to reproduce each problem they reported.
+  - **Four confirmed problems, all fixed:**
+    - **The stray-tap guard also ate keyboard presses:** at phone width without touch, each tour step needed Enter twice.
+    - **Overlay errors went silent for screen readers** while the drawer was closed.
+    - **After rotating:** going from landscape to portrait could leave the bar showing a sliver of the logo.
+    - **After rotating mid-tour:** the drawer stayed at the tour's height.
+  - **Smaller fixes:** the remaining items in "Added after testing" above.
+- **Desktop (1400×900 and 1024×768) and tablets (768×1024, and a phone held sideways at 667×375):** screenshots are pixel-identical to the old code. Element positions, styles, and Tab order are the same too, and nothing on these screens is ever inert.
+- **The tour on phones:**
+  - **Drawer per step:** the drawer is open for the five sidebar steps and closed for the map and Map/Satellite steps. It closes when the tour ends, and every tap on Next or Done leaves no district selected.
+  - **Coverage:** the popover covers each step's element no more than before:
+
+    | Step | 375×667 before → now | 320×568 before → now |
+    |---|---|---|
+    | 1. Hawaii Zoning Atlas | 51 → 3 px covered | 178 → 130 |
+    | 2. Zoning Districts | 40 of 40 visible px covered → 11 of 94 | 94 of 94 → 86 of 94 |
+    | 3. Permitted Residential Uses | 0 → 0 | 54 → 0 |
+    | 5. Overlays | 0 → 0 | 0 → 0 |
+    | 7. Zone Opacity | 0 → 0 | 0 → 0 |
+
+- **Keyboard:** the old and new tours both take one Enter per step.
+- **Regressions:** none.
+  - **Feature 2:** its seven bad links clean up to the same URLs as before.
+  - **Everything else:** Clear filters, shared links, overlays and their labels, tooltips, and zone colors behave the same.
+  - **Errors:** none in any run.
+
+**Your checks.** In Edge or Chrome, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M) with **iPhone SE**:
+- [ ] Reload. The map fills the screen above a bar that says "Filters & overlays". The Map/Satellite switch and the credits sit just above the bar.
+- [ ] Tap the bar. The drawer opens to about two-thirds of the screen, with the top of the map still showing. Turn on **1-Family Housing**: the bar says "1 filter on". Tap the bar again to close it.
+- [ ] Tap a district on Oʻahu. A short card at the top shows the county's percentage, the district's name, and one line of its note. Tap the card's top row. It expands to the full sentence, the three stats, and the whole note. Tap it again, and it shrinks.
+- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
+- [ ] Turn off the device toolbar. The desktop layout looks the same as before.
+- [ ] After you merge to `main`, try it on your own phone on the live site.
+
+**Found along the way, not changed:**
+- **`index.html`'s `<div id="Overlays">` is never closed.** So the browser puts Zone Opacity and the credits inside it, and the tour's Overlays step highlights them too.
+  - **Why it's left:** closing it changes the credits' line spacing on desktop.
+  - **Where it belongs:** the "Semantic HTML and accessibility" item.
+- **Overlay messages on phones** only show on screen when the drawer is open, but screen readers hear them either way. Before, they sat in the panel under the map, usually scrolled out of view.
+- **Rotating mid-tour across 600 px** keeps the drawer right, but the step 3 text stays worded for the orientation the tour started in.
+- **Tour step 2's popover** is taller than a 320×568 screen, so its Next button needs a scroll there. That's unchanged from before.
+
+---
+
 ## Feature 9: Shrink the map's data files (built and committed)
 
 - [x] Plan approved in chat (2026-10-04). **Waterways:** you chose to keep their fields, so `hydro.min.geojson` is unchanged.
@@ -54,55 +156,6 @@ Netlify sends today's `final.geojson` as 8.6 MB, so expect about 3.2 MB once thi
 - [X] Turn on Transit Stations (Rail). The rail line follows its route, with the stations on it.
 - [X] Optional, in Git Bash from the repo root: `~/hza/Scripts/python -X utf8 -c "import geopandas as gpd; print((~gpd.read_file('data/final.geojson').is_valid).sum())"` prints `0`, meaning no invalid shapes.
 - [X] In Git Bash: `curl -s -H 'Accept-Encoding: br' -o /dev/null -w '%{size_download}\n' https://hawaiizoningatlas.netlify.app/data/final.geojson` prints about 2990000 (bytes). Before this change it printed 8621444.
-
----
-
-## Feature 12: A filters drawer and a compact area card on phones (planned for later)
-
-- [ ] Approve this plan in chat when we get to Feature 12. You chose to do Feature 9 first (2026-10-04).
-
-**Today on a phone:** the sidebar always takes the bottom 45% of the screen. When a district is tapped, the area panel covers up to 40% of what's left. That leaves the map about a third of the screen.
-
-**The plan.** This is for phones only, 600px and narrower. Desktop and tablets stay exactly as they are.
-
-```
-Nothing selected            District tapped             Drawer open
-┌──────────────────────┐    ┌───────────────────┐[+]   ┌───────────────────┐[+]
-│                  [+] │    │ 60.6% of Honolulu ▾│[−]   │ 60.6% of Honolulu ▾│[−]
-│                  [−] │    │ Residential - 5,000│      ├────── map ────────┤
-│     full-screen      │    │ Note: PD-H PRDs …  │      ├───────────────────┤
-│        map           │    └───────────────────┘      │ ▾ Filters & overlays│
-│                      │         full-screen map       │   (scrolls inside)  │
-│            [Map/Sat] │               [Map/Sat]       │                     │
-├──────────────────────┤    ├──────────────────────┤   │                     │
-│ ▴ Filters & overlays │    │ ▴ Filters & overlays │   │                     │
-└──────────────────────┘    └──────────────────────┘   └─────────────────────┘
-```
-
-1. **Full-screen map.** It replaces today's 55/45 split.
-2. **Filters drawer:** the sidebar becomes a drawer along the bottom.
-   - **Closed** (the default): a slim bar with a "Filters & overlays" button. It also says how many housing filters are on.
-   - **Open:** it slides up to about 70% of the screen and scrolls inside. The top of the map stays visible, so you can watch the filters change it.
-   - **Accessibility:** the button is a real `<button>` with `aria-expanded`. While the drawer is closed, its contents are `inert`, so the keyboard and screen readers skip them.
-3. **Compact area card:** tapping a district shows a short card at the top with the county's percentage, the district's name, and the note's first line.
-   - **▾:** expands it to the full summary, the county stats, and the whole note, scrolling if long.
-   - **▴:** shrinks it back.
-4. **Map controls:** the Map/Satellite switch and the map credits move up, so the drawer's bar doesn't cover them.
-5. **Tour:** on phones, it opens the drawer for its sidebar steps, and closes it again when you finish or close the tour.
-
-**Files:**
-- [index.html](index.html): the drawer button.
-- [scripts/map.js](scripts/map.js): the drawer, the card, and the tour.
-- [style.css](style.css): the phone media query.
-- CLAUDE.md, the README, and Verify.md.
-
-**How Claude will check it:** headless Edge on a 375×667 and a 320×568 phone, old code vs. new:
-- **Sizes:** the map's area, the drawer's height closed and open, and the card's height collapsed and expanded.
-- **Controls:** the Map/Satellite switch and the credits stay uncovered.
-- **Tour:** every step's highlighted element is on screen.
-- **Keyboard:** Tab can't reach controls inside the closed drawer.
-- **Desktop:** the layout and styles are identical.
-- **Errors:** none.
 
 ---
 
@@ -291,7 +344,7 @@ No HTML changes.
 - [X] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
 - [ ] Turn off the device toolbar. The desktop layout looks the same as before.
 
-**Left for Feature 12 (mobile drawer):** a button to hide and show the panel. Also, the tour text still says "the menu on the left-hand side".
+**Left for Feature 12 (mobile drawer):** a button to hide and show the panel. Also, the tour text still says "the menu on the left-hand side". *(Both done in Feature 12.)*
 
 ---
 
