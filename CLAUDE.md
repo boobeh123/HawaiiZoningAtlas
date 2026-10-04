@@ -70,6 +70,8 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **The drawer:** the bar is `#drawerToggle`. `setDrawerOpen()` toggles `.drawerOpen` (70dvh) and `aria-expanded`.
       - **Closed:** `#HiZoningAtlas` is `inert`, so Tab and screen readers skip it.
       - **Open:** it covers the map's bottom corners, so `.leaflet-bottom` is `inert` instead. It sits at z-index 1001, above Leaflet's controls (1000).
+      - **The bar's click:** opening pans the map up (`map.panBy`), so the middle of the map lands in the strip above the drawer, and closing pans back.
+      - **Without the tour:** the listener is attached before `new Driver`, so it still works if Driver.js fails to load (`driver?.isActivated`).
       - **Grows instead of sliding:** Driver.js's `.driver-fix-stacking` forces `transform: none` on the highlighted element's parents.
       - **`overflow: clip`:** unlike `hidden`, it can't be scrolled, so a rotation or a `#link` can't shift the bar out of place.
       - **Filter count:** `#drawerFilterCount` shows how many housing filters are on. `countHousingFilters()` is shared with `updateResetButton()`.

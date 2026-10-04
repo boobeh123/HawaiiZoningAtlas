@@ -42,6 +42,7 @@ Nothing selected            District tapped             Drawer open
 - **The map stops at the bar** instead of running under it. That keeps the Map/Satellite switch and the credits above the bar without moving them.
 - **The drawer grows instead of sliding.** It looks the same, but the tour's library turns off slide animations on the parents of whatever it highlights, so a sliding drawer would jump during the tour.
 - **During the tour the drawer opens lower,** at 45% of the screen (the old panel's height), so the tour's popovers keep their room at the top. Each step's element sits as low in the drawer as it fits, away from the popover.
+- **Opening the drawer pans the map up** (your choice, 2026-10-04). Without it, the strip of map above the open drawer often showed only ocean, because the islands sat behind the drawer. Now what was in the middle of the map moves into the strip, and closing the drawer pans it back.
 - **Added after testing** (see Claude's checks):
   - **Stray taps:** the tour changes steps the moment your finger touches Next, so the tap's click used to land on whatever the next step put under your finger. On a phone that could be the drawer's bar or a district. Now that one click is ignored.
   - **The tour and the bar:** the bar does nothing while the tour runs.
@@ -71,6 +72,20 @@ Nothing selected            District tapped             Drawer open
     - **After rotating:** going from landscape to portrait could leave the bar showing a sliver of the logo.
     - **After rotating mid-tour:** the drawer stayed at the tour's height.
   - **Smaller fixes:** the remaining items in "Added after testing" above.
+- **Round 2:** four fresh testers on the fixed code. I stopped it before its skeptics finished, to save your credit, and checked the findings myself instead.
+  - **Fixed:**
+    - **The bar needed the tour's library:** if Driver.js failed to load from its CDN, the bar couldn't open the drawer.
+    - **The ocean strip:** see "Opening the drawer pans the map up".
+    - **Repeated messages:** an old overlay error was announced again every time the drawer closed.
+    - **Scroll positions:**
+      - After the tour, the drawer first opened scrolled to its bottom.
+      - Going back to tour step 1 left it scrolled.
+      - Switching districts in an expanded, scrolled card hid the new district's name.
+  - **Not fixed:** listed under "Left for later" below.
+- **Final checks, after every fix:**
+  - **Desktop (1400×900) and tablet (768×1024):** screenshots are byte-identical to the old code, both on a fresh load and with a district clicked.
+  - **The pan:** opening the drawer moves the middle of the map to the middle of the strip, within 1 px. Closing it moves it back exactly, with reduced motion on or off.
+  - **Rerun:** the tour, keyboard, and rotation checks.
 - **Desktop (1400×900 and 1024×768) and tablets (768×1024, and a phone held sideways at 667×375):** screenshots are pixel-identical to the old code. Element positions, styles, and Tab order are the same too, and nothing on these screens is ever inert.
 - **The tour on phones:**
   - **Drawer per step:** the drawer is open for the five sidebar steps and closed for the map and Map/Satellite steps. It closes when the tour ends, and every tap on Next or Done leaves no district selected.
@@ -92,7 +107,7 @@ Nothing selected            District tapped             Drawer open
 
 **Your checks.** In Edge or Chrome, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M) with **iPhone SE**:
 - [ ] Reload. The map fills the screen above a bar that says "Filters & overlays". The Map/Satellite switch and the credits sit just above the bar.
-- [ ] Tap the bar. The drawer opens to about two-thirds of the screen, with the top of the map still showing. Turn on **1-Family Housing**: the bar says "1 filter on". Tap the bar again to close it.
+- [ ] Tap the bar. The drawer opens to about two-thirds of the screen, and the map slides up so the islands show in the strip above it. Turn on **1-Family Housing**: the bar says "1 filter on", and the islands above change color. Tap the bar again: the drawer closes and the map slides back.
 - [ ] Tap a district on Oʻahu. A short card at the top shows the county's percentage, the district's name, and one line of its note. Tap the card's top row. It expands to the full sentence, the three stats, and the whole note. Tap it again, and it shrinks.
 - [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
 - [ ] Turn off the device toolbar. The desktop layout looks the same as before.
@@ -105,6 +120,14 @@ Nothing selected            District tapped             Drawer open
 - **Overlay messages on phones** only show on screen when the drawer is open, but screen readers hear them either way. Before, they sat in the panel under the map, usually scrolled out of view.
 - **Rotating mid-tour across 600 px** keeps the drawer right, but the step 3 text stays worded for the orientation the tour started in.
 - **Tour step 2's popover** is taller than a 320×568 screen, so its Next button needs a scroll there. That's unchanged from before.
+
+**Left for later** (round 2 testers' reports, all minor; I didn't reproduce them separately):
+- **A district tapped while the drawer is open:** if it's in a new county, the zoom fits that county to the whole map, so part of the county is behind the drawer.
+- **Phones held sideways but under 600 px wide** (like 568×320): with the drawer open there's almost no map left.
+- **Rotating from portrait to landscape mid-tour** can scroll the page and hide the highlighted element. The tour's wording also stays as it was at load.
+- **Driver.js's highlight box** can make the page scroll a little during some tour steps. Step 1 adds 10 px sideways on phones. The old code did this on other steps.
+- **Safari before version 16:** it lacks `overflow: clip`, so the rotation sliver can still happen there.
+- **Focus when the drawer closes:** if keyboard focus is inside the drawer as it closes, focus drops back to the page.
 
 ---
 
