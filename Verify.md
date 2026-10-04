@@ -6,50 +6,54 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 8: Revive the spreadsheet sync (planned, waiting for your approval)
+## Feature 8: Revive the spreadsheet sync (built, not committed yet)
 
-- [ ] Approve this plan in chat.
+- [x] Plan approved in chat (2026-10-03).
+  - **Decisions:** the master stays untouched, changes push straight to `main` on your repo, and the sync runs weekly plus a button.
+  - **No AI reviewer:** fixed checks do that job instead.
 
-**Today, `spreadsheet.yml` can't work:**
-- **Retired actions:** it uses GitHub's retired artifact actions, so it fails before doing anything. Now that you've enabled it, expect a failure email around midnight Hawaiʻi time. It can't change anything.
-- **Validation:** it validates the repo's old CSV, not the one it just downloaded. Its validator also expects the sheet's "Kauaʻi" spelling, while the map uses "Kauai".
-- **Wrong file:** it commits to `data/hawaii-zoning-data.csv`, which nothing reads. Nothing regenerates the map data.
+**What changed:**
+- **[data-pipeline/pull_sheet.py](data-pipeline/pull_sheet.py)** (new, standard library only):
+  - **Download:** it reads the four county tabs through Google's public export, without editing the sheet.
+  - **Corrections:** it applies three: the Kauaʻi spelling, Maui `P`'s blank cells, and `OD/PD` → `OS/PD`.
+  - **Output:** it writes `data-pipeline/hawaii-zoning-data.csv` and lists every changed cell.
+  - **Safety stop:** it won't run if a tab's column names change, so a renamed column can't quietly break the map.
+- **[data-pipeline/check_data.py](data-pipeline/check_data.py)** (new): it fails the run if any of these break:
+  - a county is missing, or loses more than a fifth of its districts
+  - a sidebar checkbox stops matching any district
+  - a flag stops being the text the site expects
+- **[data-pipeline/csv-validation/](data-pipeline/csv-validation/):**
+  - **Spellings:** the validators accept "Kauai" and the sheet's "Honolulu County".
+  - **Input:** `validation.py` checks whichever file it's given.
+- **[.github/workflows/spreadsheet.yml](.github/workflows/spreadsheet.yml)** (rewritten):
+  - **When it runs:** Mondays at midnight Hawaiʻi time, plus **Run workflow**.
+  - **Each run:** pull → validate → if the CSV changed, notebook → checks → commit with the change list → push to `main`.
+  - **Actions:** current versions. It stays enabled, since you already switched it on.
+- **Docs:**
+  - [data-pipeline/README.md](data-pipeline/README.md) is now the real Git Bash steps instead of Docker.
+  - CLAUDE.md and the README describe the sync. The README's "Up next" now leads with Special Notes.
 
-**Decided in chat:**
-- The master stays untouched.
-- Changes go straight to `main` on your repo. The workflow's token can't reach the org's repo.
-- It runs weekly, plus a **Run workflow** button.
-- Fixed checks stand in for an AI reviewer.
+**Claude's checks** (all passed):
+- **Byte-identical output:** with today's sheet, `pull_sheet.py` reproduces the committed CSV byte for byte. That makes a week without sheet changes a no-op, with nothing committed.
+- **The validator:**
+  - **Before the change:** it failed on "Kauai", which proves it catches problems.
+  - **Now:** it passes the CSV, fails the uncorrected sheet with 113 problems, and fails a copy with only Maui `P`'s blank cells.
+- **`check_data.py`:** today's data passes. It fails four broken copies:
+  - a missing county
+  - Maui down 30%
+  - the true/false flag mistake
+  - an unmapped "Public Hearing"
+- **End to end, in a scratch clone:**
+  - **Setup:** I faked an older sheet, with Maui P-1's 1-family answer changed.
+  - **Run:** the steps pulled the real sheet, validated it, detected the change, rebuilt the map, and passed the checks.
+  - **Commit:** `github-actions[bot]` committed "Maui P-1, 1-Family Treatment: Allowed/Conditional → Prohibited", one line in each of the 4 data files.
+  - **Result:** the rebuilt files matched `main` exactly.
+- **The workflow file:** actionlint finds no problems. The old version had 8 retired-action errors.
+- **`data-pipeline/README.md`:** every step works exactly as written, in your `~/hza` environment.
 
-**The plan:**
-1. **`data-pipeline/pull_sheet.py`** (new, Python standard library only):
-   - downloads the four county tabs from the master, read-only
-   - merges them
-   - applies three documented corrections: the Kauaʻi spelling, Maui `P`'s blank cells, and `OD/PD` → `OS/PD`
-   - writes `data-pipeline/hawaii-zoning-data.csv`
-
-   You can run it yourself with `~/hza/Scripts/python pull_sheet.py`. With today's sheet, it should reproduce the committed CSV exactly.
-2. **`data-pipeline/check_data.py`** (new): the run's safety checks and change summary.
-   - All four counties are present, and the district count is sane.
-   - Every sidebar checkbox still matches at least one district, except ADU "public hearing", which no county uses.
-   - It writes a plain-language summary of what changed, which becomes the commit message.
-3. **`data-pipeline/csv-validation/`:** the validators accept "Kauai", and `validation.py` checks whichever file it's given.
-4. **`.github/workflows/spreadsheet.yml`** (rewritten):
-   - **When it runs:** Mondays at midnight Hawaiʻi time, or when you click **Run workflow**.
-   - **Each run:** it pulls the sheet and validates it. If the CSV changed, it runs the notebook, runs the checks, and commits the CSV and the regenerated data files with the summary. Then it pushes to `main`, and Netlify deploys.
-   - **On failure:** if any step fails, nothing is pushed, and GitHub emails you.
-5. **Docs:**
-   - CLAUDE.md's pipeline section, and the README's Automation Goals and Up next.
-   - `data-pipeline/README.md`: its Docker steps get replaced with the commands you ran.
-
-`hza-data-notebook.yml`, the old manual notebook workflow, stays as it is.
-
-**How Claude will check it:**
-- **`pull_sheet.py`:** its CSV matches the committed one byte for byte, and validation passes.
-- **A fake sheet change** (one cell, in a scratch copy): the notebook runs, the checks pass, and the summary names exactly that change.
-- **A deliberate break** (a county dropped): the checks fail, so nothing would be pushed.
-- **The workflow file:** linted with actionlint.
-- **The real run:** the workflow itself only runs on GitHub. After the push, you click **Run workflow** once. With today's sheet, it should report "no changes" and push nothing.
+**Your checks:**
+- [ ] After the push, open your repo on GitHub → **Actions** → **Pull and Validate Spreadsheet Data** → **Run workflow**. It finishes green, and the "Check whether the spreadsheet changed" step says "The spreadsheet hasn't changed, so there's nothing to push."
+- [ ] Optional, in Git Bash from `data-pipeline/`: `~/hza/Scripts/python pull_sheet.py`. It prints "No changes", and `git status` stays clean.
 
 ---
 
