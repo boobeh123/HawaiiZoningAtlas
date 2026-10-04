@@ -244,8 +244,9 @@ var loadZones = function (geojson) {
         drawCountyOutlines()
         updateResetButton()
 
-        // Recalculate area
+        // Recalculate area. The new district shows from the top of the card.
         calculateActiveArea()
+        document.querySelector('#activeAreaCalculator').scrollTop = 0
 
         // Only a newly selected county moves the map. Switching districts
         // within it keeps the view, so you can read note after note.
@@ -522,7 +523,11 @@ const setDrawerOpen = (open, { animate = true } = {}) => {
   document.querySelectorAll('.leaflet-bottom').forEach((corner) => {
     corner.inert = isPhone && open
   })
-  syncOverlayAnnouncement()
+  // Open, the status line inside speaks for itself. Closing doesn't copy it
+  // back, so an old message isn't announced again.
+  if (open) {
+    document.querySelector('#overlayStatusAnnounce').textContent = ''
+  }
 
   if (!animate) {
     // Reading the height applies it before the transition comes back
@@ -1445,7 +1450,9 @@ var initMap = function () {
       matchMedia(phoneMediaQuery).matches && sidebar.contains(element.node)
     sidebar.classList.toggle('drawerTour', isInDrawer)
     setDrawerOpen(isInDrawer, { animate: false })
-    if (isInDrawer && element.node !== content) {
+    if (isInDrawer && element.node === content) {
+      content.scrollTop = 0
+    } else if (isInDrawer) {
       const drawerBox = content.getBoundingClientRect()
       const stepBox = element.node.getBoundingClientRect()
       content.scrollTop +=
@@ -1454,6 +1461,40 @@ var initMap = function () {
           : stepBox.top - drawerBox.top
     }
   }
+
+  // Phones: the drawer's bar. Opening the drawer pans the map up, so what was
+  // in the middle of the map stays in view in the strip above the drawer, and
+  // closing it pans back. The bar does nothing while the tour runs, because
+  // the tour opens and closes the drawer itself. (driver is still undefined
+  // here, and stays so if Driver.js fails to load.)
+  document.querySelector('#drawerToggle').addEventListener('click', () => {
+    if (driver?.isActivated) return
+    const open = !drawerOpen
+    // --drawerOpenHeight is in dvh, hundredths of the screen's height
+    const openHeightDvh = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        '--drawerOpenHeight'
+      )
+    )
+    const stripHeight = innerHeight * (1 - openHeightDvh / 100)
+    // Moves the middle of the whole map to the middle of the strip
+    const shift = (map.getSize().y - stripHeight) / 2
+    setDrawerOpen(open)
+    map.panBy([0, open ? shift : -shift], {
+      animate: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    })
+  })
+
+  // Rotating into the tablet layout or back changes whether the drawer's
+  // contents should be inert, and where a running tour's step should be
+  matchMedia(phoneMediaQuery).addEventListener('change', () => {
+    if (driver?.isActivated && driver.hasHighlightedElement()) {
+      showTourStep(driver.getHighlightedElement())
+      driver.refresh()
+    } else {
+      setDrawerOpen(drawerOpen, { animate: false })
+    }
+  })
 
   // Where the filters are: a drawer on phones, a panel on the left elsewhere
   const filtersPlace = matchMedia(phoneMediaQuery).matches
@@ -1479,30 +1520,14 @@ var initMap = function () {
     onReset: () => {
       rememberTourSeen()
       swallowNextClick = lastPressWasTouch
-      // Phones: the map gets the screen back
+      // Phones: the map gets the screen back, and the drawer will next open
+      // at its top
       document.querySelector('#sidebar').classList.remove('drawerTour')
       setDrawerOpen(false, { animate: false })
+      document.querySelector('#HiZoningAtlas').scrollTop = 0
     },
   })
 
-  // Phones: the drawer's bar. It does nothing while the tour runs, because
-  // the tour opens and closes the drawer itself.
-  document.querySelector('#drawerToggle').addEventListener('click', () => {
-    if (!driver.isActivated) {
-      setDrawerOpen(!drawerOpen)
-    }
-  })
-
-  // Rotating into the tablet layout or back changes whether the drawer's
-  // contents should be inert, and where a running tour's step should be
-  matchMedia(phoneMediaQuery).addEventListener('change', () => {
-    if (driver.isActivated && driver.hasHighlightedElement()) {
-      showTourStep(driver.getHighlightedElement())
-      driver.refresh()
-    } else {
-      setDrawerOpen(drawerOpen, { animate: false })
-    }
-  })
   // Define the steps for introduction
   driver.defineSteps([
     {
