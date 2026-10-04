@@ -6,7 +6,107 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Special Notes in the tooltips and the area panel (built, not committed yet)
+## Feature 9: Shrink the map's data files (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-04). **Waterways:** you chose to keep their fields, so `hydro.min.geojson` is unchanged.
+
+**Changed from the plan:**
+- **Where the script lives:** `data-pipeline/shrink_geojson.py`, not `tools/`. The notebook imports it, and the pipeline's other Python files live there.
+- **Snapping instead of plain rounding:** plain rounding left 48 of the 261 districts with invalid shapes, such as edges that cross or slivers that collapse to nothing. Leaflet draws those fine, but GIS tools like QGIS reject them. So the notebook snaps the shapes with `set_precision` first. It uses the same 1 m grid and keeps every shape valid.
+
+**What changed:**
+- [CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb): the save cell snaps every point to a 0.00001° grid (about 1 m), then runs `shrink_geojson.py` on the file. The weekly sync now produces the small file.
+- [shrink_geojson.py](data-pipeline/shrink_geojson.py) (new, standard library only): rounds a GeoJSON file's coordinates to 5 decimal places and drops the spaces, in place.
+  - **Run once on:** `counties.geojson` and `rail-transit-line.geojson`, the two other files at full precision. Both kept valid shapes.
+- [.gitignore](.gitignore): ignores the `__pycache__/` folder Python writes when the notebook imports the script.
+- **Regenerated:** both `final.geojson` copies. `final.csv` is unchanged.
+- **Docs:** CLAUDE.md, the README, and [data-pipeline/README.md](data-pipeline/README.md).
+
+**Result:**
+
+| | Before | After |
+|---|---|---|
+| Downloaded before the map shows (compressed) | 8.8 MB | **3.2 MB** |
+| Map load on a 10 Mbps phone connection | 8.5 s | **3.6 s** |
+| `final.geojson` unpacked, which the browser has to parse | 25.4 MB | **12.6 MB** |
+| County outlines, unpacked | 1.5 MB | **0.8 MB** |
+| Rail line, unpacked, when turned on | 2.7 MB | **0.4 MB** |
+
+Netlify sends today's `final.geojson` as 8.6 MB, so expect about 3.2 MB once this is live.
+
+**Claude's checks** (all passed, no errors):
+- **Data,** old vs. new `final.geojson`:
+  - **Districts:** all 261, with identical properties in the same order.
+  - **Shapes:** none invalid, before or after. No point moved more than 0.76 m, which is half a grid cell corner to corner.
+  - **Removed:** 35 slivers left over from digitizing, none bigger than 4.8 m² or wider than 0.34 m.
+  - **Acreage:** the area calculator reads `MA`, which the notebook computes before snapping, so its numbers don't change at all. The shapes' own total area changed by 0.0008%.
+  - **`check_data.py`:** it passes.
+- **The sync:** two notebook runs gave byte-identical files, so a week without sheet changes still commits nothing.
+- **Screenshots,** old vs. new, on a blank basemap with House and Senate off: statewide, Honolulu and the rail line up close, Hilo up close, Kauaʻi outlined, and Maui selected.
+  - **Differences:** 0.1% to 1% of pixels. All of them sit on zone edges, or on the hairline seams between neighboring zones, moved by about a pixel.
+  - **Unchanged:** every zone's color, and every shape big enough to see.
+- **Load time:** headless Edge throttled to 10 Mbps with 40 ms latency and no cache, three runs each: 8.4–8.6 s before, 3.5–3.7 s after.
+- **Not from this change:** House and Senate lines stack in whichever order their files finish downloading, so their shared borders show pink on some loads and yellow on others. That's been true since both became checked by default.
+
+**Your checks:**
+- [ ] Run the site locally. Zoom to street level in Honolulu and in Hilo. The districts line up with the streets as before, with no new gaps or slivers.
+- [ ] Click one district in each county, then click the same districts on https://hawaiizoningatlas.netlify.app. The area panel's acres and percentages match.
+- [ ] Turn on Transit Stations (Rail). The rail line follows its route, with the stations on it.
+- [ ] Optional, in Git Bash from the repo root: `~/hza/Scripts/python -X utf8 -c "import geopandas as gpd; print((~gpd.read_file('data/final.geojson').is_valid).sum())"` prints `0`, meaning no invalid shapes.
+- [ ] After you push, in Git Bash: `curl -s -H 'Accept-Encoding: br' -o /dev/null -w '%{size_download}\n' https://hawaiizoningatlas.netlify.app/data/final.geojson` prints about 3200000 (bytes). Before this change it printed 8621444.
+
+---
+
+## Feature 12: A filters drawer and a compact area card on phones (planned for later)
+
+- [ ] Approve this plan in chat when we get to Feature 12. You chose to do Feature 9 first (2026-10-04).
+
+**Today on a phone:** the sidebar always takes the bottom 45% of the screen. When a district is tapped, the area panel covers up to 40% of what's left. That leaves the map about a third of the screen.
+
+**The plan.** This is for phones only, 600px and narrower. Desktop and tablets stay exactly as they are.
+
+```
+Nothing selected            District tapped             Drawer open
+┌──────────────────────┐    ┌───────────────────┐[+]   ┌───────────────────┐[+]
+│                  [+] │    │ 60.6% of Honolulu ▾│[−]   │ 60.6% of Honolulu ▾│[−]
+│                  [−] │    │ Residential - 5,000│      ├────── map ────────┤
+│     full-screen      │    │ Note: PD-H PRDs …  │      ├───────────────────┤
+│        map           │    └───────────────────┘      │ ▾ Filters & overlays│
+│                      │         full-screen map       │   (scrolls inside)  │
+│            [Map/Sat] │               [Map/Sat]       │                     │
+├──────────────────────┤    ├──────────────────────┤   │                     │
+│ ▴ Filters & overlays │    │ ▴ Filters & overlays │   │                     │
+└──────────────────────┘    └──────────────────────┘   └─────────────────────┘
+```
+
+1. **Full-screen map.** It replaces today's 55/45 split.
+2. **Filters drawer:** the sidebar becomes a drawer along the bottom.
+   - **Closed** (the default): a slim bar with a "Filters & overlays" button. It also says how many housing filters are on.
+   - **Open:** it slides up to about 70% of the screen and scrolls inside. The top of the map stays visible, so you can watch the filters change it.
+   - **Accessibility:** the button is a real `<button>` with `aria-expanded`. While the drawer is closed, its contents are `inert`, so the keyboard and screen readers skip them.
+3. **Compact area card:** tapping a district shows a short card at the top with the county's percentage, the district's name, and the note's first line.
+   - **▾:** expands it to the full summary, the county stats, and the whole note, scrolling if long.
+   - **▴:** shrinks it back.
+4. **Map controls:** the Map/Satellite switch and the map credits move up, so the drawer's bar doesn't cover them.
+5. **Tour:** on phones, it opens the drawer for its sidebar steps, and closes it again when you finish or close the tour.
+
+**Files:**
+- [index.html](index.html): the drawer button.
+- [scripts/map.js](scripts/map.js): the drawer, the card, and the tour.
+- [style.css](style.css): the phone media query.
+- CLAUDE.md, the README, and Verify.md.
+
+**How Claude will check it:** headless Edge on a 375×667 and a 320×568 phone, old code vs. new:
+- **Sizes:** the map's area, the drawer's height closed and open, and the card's height collapsed and expanded.
+- **Controls:** the Map/Satellite switch and the credits stay uncovered.
+- **Tour:** every step's highlighted element is on screen.
+- **Keyboard:** Tab can't reach controls inside the closed drawer.
+- **Desktop:** the layout and styles are identical.
+- **Errors:** none.
+
+---
+
+## Special Notes in the tooltips and the area panel (built and committed)
 
 - [x] Plan approved in chat (2026-10-04), with all three recommendations.
   - **Notes:** a preview in the tooltip, and the full note in the panel.
