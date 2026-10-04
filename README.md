@@ -166,7 +166,7 @@ Our research team read the complete zoning codes of all four counties and record
 * Overlays that download only when they're first turned on, with loading and error messages
 * Shareable links that save the map view and every filter, and ignore anything that doesn't match a real filter
 * Map and satellite basemaps, plus a zone opacity slider
-* Hover tooltips with each district's name and county
+* Hover tooltips with each district's name, county, and the start of the researchers' notes. Click a district for its full notes in the county panel; on phones, a tap shows them there instead of a tooltip
 * Spreadsheet and link text rendered as text, never as HTML, to prevent cross-site scripting (XSS)
 * A guided intro tour that shows only on the first visit
 * County stats generated from the Census API by a Node script, so the API key never reaches the browser
@@ -258,10 +258,11 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Clear filters:** the button now also clears the county from the URL, leaves the overlays on, shows only when there's something to clear, and works from the keyboard
 - **Selected county:** outlined in thick cyan above the House and Senate lines, where it used to be a thin yellow line that blended into the Senate districts
 - **Spreadsheet sync:** the GitHub Action that pulls the research spreadsheet works again, weekly. It now also rebuilds the map data, checks it, and deploys it
+- **District notes:** the researchers' Special Notes now show for 161 districts, including why Hawaiʻi County's farm districts count 1-family homes as prohibited
+- **Phones:** no tooltips covering the small map, and tapping a district never zooms out
 
 #### Up next
 
-- Show the spreadsheet's Special Notes in the district tooltips
 - Shrink `final.geojson`, which is about 25 MB today
 - Semantic HTML and accessibility
 - Replace Tachyons with plain CSS
