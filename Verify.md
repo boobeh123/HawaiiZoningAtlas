@@ -37,11 +37,11 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 | ✕ look, desktop and phone | 20×20 grey circle | identical size, place, and style |
 
 **Your checks:**
-- [ ] Open http://localhost:8000 in a new tab. With no filters on, there's no ✕ beside "Permitted Residential Uses".
-- [ ] Turn on **1-Family Housing** and click Oʻahu. The ✕ appears, and Oʻahu gets a thick cyan outline over the yellow Senate lines.
+- [X] Open http://localhost:8000 in a new tab. With no filters on, there's no ✕ beside "Permitted Residential Uses".
+- [X] Turn on **1-Family Housing** and click Oʻahu. The ✕ appears, and Oʻahu gets a thick cyan outline over the yellow Senate lines.
 - [x] Click the ✕. The filters clear, the area panel closes, the cyan outline goes away, and House and Senate stay on.
-- [ ] Press F5. Oʻahu stays unselected.
-- [ ] Turn on **2-Family Housing**, press Tab until the ✕ has a focus ring, then press Enter. The filters clear.
+- [X] Press F5. Oʻahu stays unselected.
+- [X] Turn on **2-Family Housing**, press Tab until the ✕ has a focus ring, then press Enter. The filters clear.
 
 ---
 
@@ -76,10 +76,10 @@ No HTML changes.
 - **Reduced motion:** animations drop to nothing, and zooming still works.
 
 **Your checks.** On your computer, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M). After a push, you can also use your phone on the live site.
-- [ ] In the device toolbar's device list, pick **iPhone SE**. It's a built-in preset, so no actual iPhone is needed, and your own phone on the live site works too. Reload. The map shows every island, and the sidebar is a panel underneath it that scrolls.
-- [ ] Turn on **1-Family Housing** in the panel, then tap Oʻahu. The area panel appears across the top of the map, and the zoom buttons stay clear.
-- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. Every popover fits on screen.
-- [ ] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
+- [X] In the device toolbar's device list, pick **iPhone SE**. It's a built-in preset, so no actual iPhone is needed, and your own phone on the live site works too. Reload. The map shows every island, and the sidebar is a panel underneath it that scrolls.
+- [X] Turn on **1-Family Housing** in the panel, then tap Oʻahu. The area panel appears across the top of the map, and the zoom buttons stay clear.
+- [X] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. Every popover fits on screen.
+- [X] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
 - [ ] Turn off the device toolbar. The desktop layout looks the same as before.
 
 **Left for Feature 12 (mobile drawer):** a button to hide and show the panel. Also, the tour text still says "the menu on the left-hand side".
@@ -100,7 +100,7 @@ No HTML changes.
 - **The 7 bad links from Feature 2:** all of them clean up to the URLs your Feature 2 checklist expects again. The live code had been adding `Overlay=house&Overlay=senate` to every one.
 
 **Your checks.** Open each link in a new tab:
-- [ ] Open http://localhost:8000. House and Senate are on.
+- [X] Open http://localhost:8000. House and Senate are on.
 - [x] Uncheck **House District**, copy the URL, and open it in a new tab. House stays off and Senate stays on.
 - [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. After a few seconds, the URL ends in `/townActive=&opacity=90`, and House and Senate are off.
 
@@ -153,13 +153,13 @@ No HTML changes.
   - **Errors:** none in either run, whether exceptions, console errors, or failed requests.
 
 **Your checks.** Open each link in a new tab, or press F5 after pasting it:
-- [ ] Open http://localhost:8000/#15/19.96332/-155.78734 (Waikoloa Village). Hover the purple district in the middle. The tooltip says SINGLE-FAMILY RESIDENTIAL - 10,000 SQUARE FEET and Hawaii, with no "Requires a Minimum Home Size" line.
+- [X] Open http://localhost:8000/#15/19.96332/-155.78734 (Waikoloa Village). Hover the purple district in the middle. The tooltip says SINGLE-FAMILY RESIDENTIAL - 10,000 SQUARE FEET and Hawaii, with no "Requires a Minimum Home Size" line.
 - [ ] Turn on **1-Family Housing** and click that district. The panel says 2.7% of Hawaii. Now check **No Minimum Unit Size Requirement**. It stays at 2.7%. Before this fix, it dropped to 0.0%.
-- [ ] Open http://localhost:8000/#16/21.92291/-159.52101 and turn on **1-Family Housing**. The purple district in the middle stays purple. Hover it: RESIDENTIAL (4 UNITS/ACRE)/SPECIAL TREATMENT - PUBLIC. Before this fix, it turned gray. Click it: the panel says 57.0% of Kauai.
-- [ ] Open http://localhost:8000/#16/20.88754/-156.50056 (downtown Wailuku). The blocks around Main Street are colored, not gray. Hover the middle: COMMERCIAL MIXED USE - WRA, Maui.
-- [ ] Turn on **Accessory Dwelling Units** and check **Allows Renters**. Districts stay colored. Before this fix, the whole map went gray. Uncheck it and try **Allows Non-Family/Non-Employees**, **Not Restricted to Primary Structure**, and **No Maximum Size Limitation** one at a time.
-- [ ] With DevTools open (F12, Console tab), reload the page. No red errors.
-- [ ] Optional, after the commit: run the notebook yourself from `data-pipeline/` (see CLAUDE.md, Notebook). Afterwards, `git status` shows no changes to `final.geojson`, which means your machine produces the same file.
+- [X] Open http://localhost:8000/#16/21.92291/-159.52101 and turn on **1-Family Housing**. The purple district in the middle stays purple. Hover it: RESIDENTIAL (4 UNITS/ACRE)/SPECIAL TREATMENT - PUBLIC. Before this fix, it turned gray. Click it: the panel says 57.0% of Kauai.
+- [X] Open http://localhost:8000/#16/20.88754/-156.50056 (downtown Wailuku). The blocks around Main Street are colored, not gray. Hover the middle: COMMERCIAL MIXED USE - WRA, Maui.
+- [X] Turn on **Accessory Dwelling Units** and check **Allows Renters**. Districts stay colored. Before this fix, the whole map went gray. Uncheck it and try **Allows Non-Family/Non-Employees**, **Not Restricted to Primary Structure**, and **No Maximum Size Limitation** one at a time.
+- [X] With DevTools open (F12, Console tab), reload the page. No red errors.
+- [X] Optional, after the commit: run the notebook yourself from `data-pipeline/` (see CLAUDE.md, Notebook). Afterwards, `git status` shows no changes to `final.geojson`, which means your machine produces the same file.
 
 **Your follow-up:** make the same two cell fixes in the Google Sheet, so the next export keeps them. Feature 8 depends on it.
 - [ ] Maui `P` (Public Use) row: State `HI`, Jurisdiction `Maui`, County `Maui`.
@@ -273,11 +273,11 @@ One decision for you:
 - **Link with overlays checked:** a link with Transit and State Lands checked shows both, and downloads only those two overlays' files.
 - **Regressions:** tooltips, the Honolulu panel's 2020–2024 numbers, and the bad-link cleanup still work.
 
-- [ ] Open DevTools → **Network**, then reload. No overlay files (`hydro`, `federal-land`, `state-land`, `dhhl-land`, `rail-transit`, `house-districts`, `senate-districts`) download until you check an overlay.
-- [ ] Check **Waterways**. "Loading Waterways…" appears under the Overlays heading, then the overlay shows and the message goes away.
-- [ ] Uncheck and re-check **Waterways**. It comes back right away, with no second download in the Network tab.
-- [ ] Reload with DevTools → **Network** → throttling set to **Slow 4G**. "Loading zoning data…" shows at the top of the map until the zones appear. Set throttling back to **No throttling** afterwards.
-- [ ] Optional error check: in the Network tab, right-click `federal-land.min.geojson` and choose **Block request URL**, then check **Federal Lands**. The red error appears and the box unchecks. Unblock it afterwards.
+- [X] Open DevTools → **Network**, then reload. No overlay files (`hydro`, `federal-land`, `state-land`, `dhhl-land`, `rail-transit`, `house-districts`, `senate-districts`) download until you check an overlay.
+- [X] Check **Waterways**. "Loading Waterways…" appears under the Overlays heading, then the overlay shows and the message goes away.
+- [X] Uncheck and re-check **Waterways**. It comes back right away, with no second download in the Network tab.
+- [X] Reload with DevTools → **Network** → throttling set to **Slow 4G**. "Loading zoning data…" shows at the top of the map until the zones appear. Set throttling back to **No throttling** afterwards.
+- [X] Optional error check: in the Network tab, right-click `federal-land.min.geojson` and choose **Block request URL**, then check **Federal Lands**. The red error appears and the box unchecks. Unblock it afterwards.
 
 ---
 
@@ -294,8 +294,8 @@ One decision for you:
 - **Storage blocked:** the tour shows and closes normally, then comes back on reload. Nothing throws.
 
 - [x] Close the tour, then reload. It doesn't come back.
-- [ ] To see it again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
-- [ ] Localhost and the live site keep separate storage, so you'll see the tour once on each.
+- [X] To see it again, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
+- [X] Localhost and the live site keep separate storage, so you'll see the tour once on each.
 
 ---
 
@@ -315,7 +315,7 @@ One decision for you:
 
 - [X] On localhost, the map shows the light basemap with place names (Honolulu, Kāneʻohe, Kailua-Kona, and so on) and no "API KEY REQUIRED" anywhere. Zoom in and out a few levels.
 - [X] Switch to **Satellite** and back to **Map**. Both work.
-- [ ] After you push, check https://hawaiizoningatlas.netlify.app the same way.
+- [X] After you push, check https://hawaiizoningatlas.netlify.app the same way.
 
 **Production key** (added 2026-10-01, not committed yet): the map uses the localhost key on `localhost` and `127.0.0.1`, and your production key everywhere else.
 - **Claude's check:** on `127.0.0.1`, all 60 tiles carried the localhost key. On a production-like hostname, all 60 carried the production key. No watermarks, no errors.
@@ -420,7 +420,7 @@ This fixes review items #3 and #10.
 
 - [X] Check **2-Family Housing**. The URL updates. Reload the page and the same boxes come back.
 - [X] Click a county and move the opacity slider, then paste the URL into a new tab. The same county, boxes, and opacity come back.
-- [ ] Open each bad link below **in a new tab**, or paste it and then press F5. For each one, the map loads, the console shows no red errors, and the URL cleans itself up as described.
+- [X] Open each bad link below **in a new tab**, or paste it and then press F5. For each one, the map loads, the console shows no red errors, and the URL cleans itself up as described.
 
 **Bad links to keep testing.** Re-run these whenever URL handling changes.
 
