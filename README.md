@@ -164,6 +164,7 @@ Our research team read the complete zoning codes of all four counties and record
 * Overlays for waterways, federal lands, state lands, Hawaiian Home Lands (DHHL), rail stations with half-mile circles, and State House and Senate districts
 * House and Senate district labels that appear as you zoom in and never overlap
 * Overlays that download only when they're first turned on, with loading and error messages
+* Map data trimmed to half its original size, so the map loads in under half the time
 * Shareable links that save the map view and every filter, and ignore anything that doesn't match a real filter
 * Map and satellite basemaps, plus a zone opacity slider
 * Hover tooltips with each district's name, county, and the start of the researchers' notes. Click a district for its full notes in the county panel; on phones, a tap shows them there instead of a tooltip
@@ -198,7 +199,7 @@ The **Jupyter** notebook [CombineJurisdictions.ipynb](data-pipeline/CombineJuris
 2. Gives each district an ID built from its state, county, and district name (Maui's `P-1` becomes `HI--MAUI--P1`), which links the map to its spreadsheet row
 3. Measures each district in an equal-area projection (EPSG:6933), then subtracts federal and state land, which counties can't zone. What's left is the district's zoned acreage (`MA`), which the area calculator adds up
 4. Turns the spreadsheet's answers into filter values with **pandas**. For example, minimum lot sizes are grouped into five ranges, from none to 1.84+ acres
-5. Shortens the column names and values to keep the file small (`1-Family Treatment: Allowed/Conditional` becomes `1F: A`), simplifies the shapes to within about 2 m, and writes `final.geojson`, which is copied to [data/final.geojson](data/final.geojson)
+5. Shortens the column names and values to keep the file small (`1-Family Treatment: Allowed/Conditional` becomes `1F: A`), simplifies the shapes to within about 2 m, and snaps every point to a 1 m grid. [shrink_geojson.py](data-pipeline/shrink_geojson.py) then writes `final.geojson` without extra digits or spaces, and it's copied to [data/final.geojson](data/final.geojson)
 
 Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows/spreadsheet.yml)) keeps the map in sync with the spreadsheet:
 - [pull_sheet.py](data-pipeline/pull_sheet.py) reads the sheet without editing it, and fixes a few known problems on the way in.
@@ -260,10 +261,10 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Spreadsheet sync:** the GitHub Action that pulls the research spreadsheet works again, weekly. It now also rebuilds the map data, checks it, and deploys it
 - **District notes:** the researchers' Special Notes now show for 161 districts, including why Hawaiʻi County's farm districts count 1-family homes as prohibited
 - **Phones:** no tooltips covering the small map, and tapping a district never zooms out
+- **Smaller map data:** the zoning file is half its old size (25.4 → 12.6 MB, or 8.6 → about 3.2 MB as sent), so the map loads in 3.6 s instead of 8.5 s on a 10 Mbps connection. The county outlines and the rail line shrank too, and the map looks the same
 
 #### Up next
 
-- Shrink `final.geojson`, which is about 25 MB today
 - Semantic HTML and accessibility
 - Replace Tachyons with plain CSS
 - A mobile drawer: a button to hide and show the filter panel on phones
