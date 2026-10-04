@@ -1,4 +1,43 @@
 :root {
+  /* Colors. Text and lines are black at different strengths, so they read
+     on the white panels and over the map alike. */
+  --colorSurface: white;
+  --colorInk: black;
+  --colorText: rgba(0, 0, 0, 0.8);
+  --colorTextSoft: rgba(0, 0, 0, 0.7);
+  --colorTextMuted: rgba(0, 0, 0, 0.6);
+  --colorTextFaint: rgba(0, 0, 0, 0.5);
+  --colorBorderStrong: rgba(0, 0, 0, 0.35);
+  --colorBorder: rgba(0, 0, 0, 0.1);
+  --colorShadow: rgba(0, 0, 0, 0.2);
+  --colorRule: #333;
+  /* Error text, 7.3:1 contrast on white */
+  --colorError: #b00020;
+  /* The House and Senate lines' colors (see map.js), for their labels */
+  --colorHouse: #e06aaa;
+  --colorSenate: #f8f807;
+
+  --fontBody: 'Zodiak', serif;
+  --fontHeading: 'Red Hat Display', sans-serif;
+
+  /* Font sizes, smallest to largest. Base is the body text. */
+  --fontSize3xs: 10px;
+  --fontSize2xs: 12px;
+  --fontSizeXs: 13px;
+  --fontSizeSm: 14px;
+  --fontSizeBase: 16px;
+  --fontSizeLg: 20px;
+
+  --spaceXs: 6px;
+  --spaceSm: 0.5rem;
+  --spaceMd: 1rem;
+
+  /* Wider screens: the floating boxes' distance from the screen's edges, the
+     sidebar's width, and the area panel's width */
+  --edgeGap: 10px;
+  --sidebarWidth: 380px;
+  --areaPanelWidth: 340px;
+
   /* Phone drawer (see Media queries): the bar that always shows, the drawer's
      height when open, and its lower height during the tour, which leaves
      room above it for the tour's popovers pinned at the top */
@@ -18,8 +57,8 @@
 body {
   padding: 0;
   margin: 0;
-  font-family: 'Zodiak', serif;
-  font-size: 16px;
+  font-family: var(--fontBody);
+  font-size: var(--fontSizeBase);
   letter-spacing: 0.02em;
 }
 /* html, body, #map {
@@ -28,20 +67,20 @@ body {
 } */
 
 h2 {
-  font-family: 'Red Hat Display', sans-serif;
-  font-size: 20px;
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeLg);
   letter-spacing: 0.03em;
 }
 
 #sidebar {
   z-index: 999 !important;
   position: absolute;
-  width: 380px;
-  max-height: calc(100vh - 20px);
+  width: var(--sidebarWidth);
+  max-height: calc(100vh - 2 * var(--edgeGap));
   overflow-y: scroll;
-  background-color: white;
-  top: 10px;
-  left: 10px;
+  background-color: var(--colorSurface);
+  top: var(--edgeGap);
+  left: var(--edgeGap);
   opacity: 0.95;
 }
 
@@ -75,19 +114,19 @@ label:hover {
 
 .main-in-group:checked ~ span {
   font-weight: bold;
-  color: rgba(0,0,0,0.8);
+  color: var(--colorText);
 }
 
 hr {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--colorRule);
   border-bottom: 0;
 }
 
 #activeAreaCalculator {
   position: absolute;
-  top: 10px;
-  width: 340px;
-  margin-left: -170px;
+  top: var(--edgeGap);
+  width: var(--areaPanelWidth);
+  margin-left: calc(var(--areaPanelWidth) / -2);
   left: 50%;
   z-index: 999;
   font-size: 0.95em;
@@ -96,20 +135,20 @@ hr {
 /* Row of county stats under the area calculation */
 .areaStats {
   display: flex;
-  font-size: 13px;
+  font-size: var(--fontSizeXs);
 }
 
 /* Two classes so this outranks the 24px in Google's .material-icons rule */
 .areaStats .statIcon {
-  font-size: 16px;
+  font-size: var(--fontSizeBase);
 }
 
 /* The clicked district under the county stats (see buildDistrictDetails) */
 .districtDetails {
   margin-top: 0.75em;
   padding-top: 0.75em;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  font-size: 13px;
+  border-top: 1px solid var(--colorBorder);
+  font-size: var(--fontSizeXs);
 }
 
 .districtName {
@@ -119,7 +158,7 @@ hr {
 
 .districtFlags {
   margin: 0.25em 0 0;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--colorTextMuted);
 }
 
 /* Keeps the notes' own line breaks, and scrolls when a note runs long */
@@ -133,15 +172,15 @@ hr {
 /* Loading and error message at the top of the map */
 .mapStatus {
   position: absolute;
-  top: 10px;
+  top: var(--edgeGap);
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
   margin: 0;
   padding: 8px 12px;
-  background-color: white;
+  background-color: var(--colorSurface);
   border-radius: 2px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 4px var(--colorShadow);
   font-size: 0.95em;
 }
 
@@ -155,23 +194,22 @@ hr {
 /* Loading and error line under the Overlays heading */
 .overlayStatus {
   margin: 0;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.7);
+  font-size: var(--fontSizeSm);
+  color: var(--colorTextSoft);
 }
 
-/* Error text, 7.3:1 contrast on white */
 .statusError {
-  color: #b00020;
+  color: var(--colorError);
 }
 
 .leaflet-control-layers-expanded {
-  border: 1px solid white;
+  border: 1px solid var(--colorSurface);
   border-radius: 2px;
 }
 
 #resetFilters {
   cursor: pointer;
-  font-size: 20px;
+  font-size: var(--fontSizeLg);
 }
 
 /* Google's .material-icons rule sets display: inline-block, which would beat
@@ -196,7 +234,7 @@ hr {
 .t-t {
   margin: 0;
   padding: 0;
-  color: rgba(0,0,0,0.5);
+  color: var(--colorTextFaint);
   font-size: 1em;
 }
 
@@ -210,12 +248,12 @@ hr {
 .leaflet-tooltip.districtLabel {
   width: auto;
   white-space: nowrap !important;
-  padding: 1px 6px;
-  border: 1px solid rgba(0, 0, 0, 0.35);
+  padding: 1px var(--spaceXs);
+  border: 1px solid var(--colorBorderStrong);
   border-radius: 9px;
   box-shadow: none;
-  color: black;
-  font-size: 12px;
+  color: var(--colorInk);
+  font-size: var(--fontSize2xs);
   font-weight: bold;
   line-height: 1.4;
 }
@@ -223,11 +261,11 @@ hr {
 /* Filled with each overlay's line color: black text is 6.8:1 on the pink
    and 18:1 on the yellow */
 .leaflet-tooltip.houseLabel {
-  background-color: #e06aaa;
+  background-color: var(--colorHouse);
 }
 
 .leaflet-tooltip.senateLabel {
-  background-color: #f8f807;
+  background-color: var(--colorSenate);
 }
 
 /* Hidden while the label has no room on screen (see updateDistrictLabels).
@@ -242,13 +280,13 @@ hr {
 }
 
 #driver-popover-item * {
-  font-family: 'Zodiak', serif !important;
-  font-size: 16px !important;
+  font-family: var(--fontBody) !important;
+  font-size: var(--fontSizeBase) !important;
   letter-spacing: 0.02em;
 }
 
 .bb-dotted {
-  border-bottom: 1px dotted #333;
+  border-bottom: 1px dotted var(--colorRule);
 }
 
 /**************************************************************
@@ -268,7 +306,8 @@ Media queries
      shows (see setDrawerOpen). It grows instead of sliding, because Driver.js
      turns off transforms on the parents of the tour's highlighted elements.
      Open, it covers part of the map, so it goes above Leaflet's controls
-     (z-index 1000). */
+     (z-index 1000). The !important beats the one in the #sidebar rule
+     above. */
   #sidebar {
     z-index: 1001 !important;
     top: auto;
@@ -286,7 +325,7 @@ Media queries
     overflow: clip;
     border-radius: 0;
     opacity: 1;
-    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -2px 6px var(--colorShadow);
     transition: height 0.2s ease-out;
   }
 
@@ -305,19 +344,21 @@ Media queries
     transition: none;
   }
 
+  /* Its side padding matches the drawer's contents, so the label lines up
+     with them */
   #drawerToggle {
     display: flex;
     flex: none;
     align-items: center;
-    gap: 6px;
+    gap: var(--spaceXs);
     width: 100%;
     height: var(--drawerBarHeight);
-    padding: 0 16px;
+    padding: 0 var(--spaceMd);
     border: 0;
-    background-color: white;
-    color: rgba(0, 0, 0, 0.8);
-    font-family: 'Red Hat Display', sans-serif;
-    font-size: 16px;
+    background-color: var(--colorSurface);
+    color: var(--colorText);
+    font-family: var(--fontHeading);
+    font-size: var(--fontSizeBase);
     font-weight: bold;
     letter-spacing: 0.03em;
     text-align: left;
@@ -326,7 +367,7 @@ Media queries
   }
 
   #sidebar.drawerOpen #drawerToggle {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--colorBorder);
   }
 
   /* On the narrowest phones the label gives way to the count */
@@ -340,8 +381,8 @@ Media queries
   #drawerFilterCount {
     flex: none;
     margin-left: auto;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 14px;
+    color: var(--colorTextMuted);
+    font-size: var(--fontSizeSm);
   }
 
   /* Focus rings go inside the buttons, because the drawer and the area card
@@ -357,7 +398,7 @@ Media queries
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 1rem;
+    padding: var(--spaceMd);
   }
 
   /* Across the top of the map, clear of the zoom buttons */
@@ -378,7 +419,7 @@ Media queries
 
   /* With the drawer open, the card fits in the strip of map above it */
   body:has(#sidebar.drawerOpen) #activeAreaCalculator {
-    max-height: calc(100dvh - var(--drawerOpenHeight) - 10px - var(--phoneGap));
+    max-height: calc(100dvh - var(--drawerOpenHeight) - var(--edgeGap) - var(--phoneGap));
   }
 
   :root {
@@ -400,12 +441,12 @@ Media queries
     order: -2;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: var(--spaceXs);
     /* Reaches into the card's 1rem padding (Tachyons' pa3), so the whole top
        of the card is a 48px touch target while the text stays put */
-    width: calc(100% + 2rem);
-    margin: -1rem -1rem -0.5rem;
-    padding: 1rem 1rem 0.5rem;
+    width: calc(100% + 2 * var(--spaceMd));
+    margin: calc(-1 * var(--spaceMd)) calc(-1 * var(--spaceMd)) calc(-1 * var(--spaceSm));
+    padding: var(--spaceMd) var(--spaceMd) var(--spaceSm);
     border: 0;
     background: none;
     color: inherit;
@@ -421,7 +462,7 @@ Media queries
     margin: 0.5em 0 0;
     padding: 0 0 0.75em;
     border-top: 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--colorBorder);
   }
 
   #activeAreaCalculator .areaSummary {
@@ -449,7 +490,7 @@ Media queries
 
   /* Two classes to match Leaflet's own rule, which this file loads after */
   .leaflet-container .leaflet-control-attribution {
-    font-size: 10px;
+    font-size: var(--fontSize3xs);
   }
 
   /* There's no room beside the sidebar for the tour's popovers, so each one
@@ -474,11 +515,11 @@ Media queries
 }
 
 /* Tablets and phones held sideways: below 1140px wide, the centered area
-   panel would slide under the sidebar, so it sits beside it instead. 400px
-   is the sidebar's 10px offset, its 380px width, and a 10px gap. */
+   panel would slide under the sidebar, so it sits beside it instead: past
+   the sidebar's offset and width, plus a gap the size of that offset. */
 @media screen and (min-width: 601px) and (max-width: 1139px) {
   #activeAreaCalculator {
-    left: 400px;
+    left: calc(2 * var(--edgeGap) + var(--sidebarWidth));
     right: var(--zoomButtonsClearance);
     width: auto;
     margin-left: 0;
