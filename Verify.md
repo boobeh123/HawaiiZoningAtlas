@@ -6,7 +6,54 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 6: Finish Clear filters, and outline the selected county (built, not committed yet)
+## Feature 8: Revive the spreadsheet sync (planned, waiting for your approval)
+
+- [ ] Approve this plan in chat.
+
+**Today, `spreadsheet.yml` can't work:**
+- **Retired actions:** it uses GitHub's retired artifact actions, so it fails before doing anything. Now that you've enabled it, expect a failure email around midnight Hawaiʻi time. It can't change anything.
+- **Validation:** it validates the repo's old CSV, not the one it just downloaded. Its validator also expects the sheet's "Kauaʻi" spelling, while the map uses "Kauai".
+- **Wrong file:** it commits to `data/hawaii-zoning-data.csv`, which nothing reads. Nothing regenerates the map data.
+
+**Decided in chat:**
+- The master stays untouched.
+- Changes go straight to `main` on your repo. The workflow's token can't reach the org's repo.
+- It runs weekly, plus a **Run workflow** button.
+- Fixed checks stand in for an AI reviewer.
+
+**The plan:**
+1. **`data-pipeline/pull_sheet.py`** (new, Python standard library only):
+   - downloads the four county tabs from the master, read-only
+   - merges them
+   - applies three documented corrections: the Kauaʻi spelling, Maui `P`'s blank cells, and `OD/PD` → `OS/PD`
+   - writes `data-pipeline/hawaii-zoning-data.csv`
+
+   You can run it yourself with `~/hza/Scripts/python pull_sheet.py`. With today's sheet, it should reproduce the committed CSV exactly.
+2. **`data-pipeline/check_data.py`** (new): the run's safety checks and change summary.
+   - All four counties are present, and the district count is sane.
+   - Every sidebar checkbox still matches at least one district, except ADU "public hearing", which no county uses.
+   - It writes a plain-language summary of what changed, which becomes the commit message.
+3. **`data-pipeline/csv-validation/`:** the validators accept "Kauai", and `validation.py` checks whichever file it's given.
+4. **`.github/workflows/spreadsheet.yml`** (rewritten):
+   - **When it runs:** Mondays at midnight Hawaiʻi time, or when you click **Run workflow**.
+   - **Each run:** it pulls the sheet and validates it. If the CSV changed, it runs the notebook, runs the checks, and commits the CSV and the regenerated data files with the summary. Then it pushes to `main`, and Netlify deploys.
+   - **On failure:** if any step fails, nothing is pushed, and GitHub emails you.
+5. **Docs:**
+   - CLAUDE.md's pipeline section, and the README's Automation Goals and Up next.
+   - `data-pipeline/README.md`: its Docker steps get replaced with the commands you ran.
+
+`hza-data-notebook.yml`, the old manual notebook workflow, stays as it is.
+
+**How Claude will check it:**
+- **`pull_sheet.py`:** its CSV matches the committed one byte for byte, and validation passes.
+- **A fake sheet change** (one cell, in a scratch copy): the notebook runs, the checks pass, and the summary names exactly that change.
+- **A deliberate break** (a county dropped): the checks fail, so nothing would be pushed.
+- **The workflow file:** linted with actionlint.
+- **The real run:** the workflow itself only runs on GitHub. After the push, you click **Run workflow** once. With today's sheet, it should report "no changes" and push nothing.
+
+---
+
+## Feature 6: Finish Clear filters, and outline the selected county (built and committed)
 
 - [x] Plan approved in chat (2026-10-02). You chose cyan for the outline.
 
@@ -161,9 +208,9 @@ No HTML changes.
 - [X] With DevTools open (F12, Console tab), reload the page. No red errors.
 - [X] Optional, after the commit: run the notebook yourself from `data-pipeline/` (see CLAUDE.md, Notebook). Afterwards, `git status` shows no changes to `final.geojson`, which means your machine produces the same file.
 
-**Your follow-up:** make the same two cell fixes in the Google Sheet, so the next export keeps them. Feature 8 depends on it.
-- [ ] Maui `P` (Public Use) row: State `HI`, Jurisdiction `Maui`, County `Maui`.
-- [ ] Kauaʻi `OD/PD`: change to `OS/PD`.
+**No longer needed** (decided 2026-10-02): the Google Sheet follow-up. You're leaving the master untouched, and Feature 8's pull script applies these two fixes in code instead:
+- Maui `P` (Public Use) row: State `HI`, Jurisdiction `Maui`, County `Maui`.
+- Kauaʻi `OD/PD`: change to `OS/PD`.
 
 ---
 
