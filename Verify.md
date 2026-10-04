@@ -6,13 +6,112 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 12: A filters drawer and a compact area card on phones (built on a branch, not on `main` yet)
+## Feature 11, step 1: Custom properties for `style.css`, and fixed zone colors (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-04), with zone colors **C**.
+
+**Why:** your standards define colors, fonts, and spacing once, as custom properties on `:root`.
+- **Today:** `style.css` has raw values instead: 14 colors used 22 times, 2 font families in 4 places, and 9 font sizes.
+- **The review:** the new drawer CSS added more raw values, which the Feature 12 review flagged.
+- **Later:** the navbar and Home page (roadmap item 1) will reuse these variables.
+
+**Why the zone colors change too:** you OK'd a new color scheme if it makes sense. Today's zone colors fail the dataviz skill's palette validator, measured as they show on the map: at 90% opacity over the basemap, checking every pair, since any two districts can sit side by side.
+
+| | Primarily Residential | Mixed with Residential | Nonresidential |
+|---|---|---|---|
+| Today | `#BB22CA` magenta | `#714674` at 92% | `#714674` at 67% |
+| **C (chosen)** | `#BB22CA`, unchanged | `#4a2b83`, deep purple | `#aa75b6`, soft orchid |
+| D (not chosen) | `#BB22CA`, unchanged | `#4a2b83`, deep purple | `#a498e6`, lavender |
+
+| Check | Today | C |
+|---|---|---|
+| Mixed vs. Nonresidential, normal vision (needs 15 or more) | 12.2, **fails** | every pair 15.6 or more |
+| With colorblindness (target 8) | 10.1 | every pair 10.3 or more |
+| Mixed and Nonresidential read as colors, not gray (chroma 0.10 or more) | 0.071 and 0.049, **fail** | all 0.10 or more |
+| Nonresidential vs. the "not satisfying" gray | clearly apart | clearly apart (22.0) |
+| Nonresidential vs. the basemap (3:1 ideal) | 2.86:1 | 2.95:1 |
+
+- **Why C:** it keeps today's look. The magenta stays, and Nonresidential, which covers 93% of the zoned land, stays a calm mauve. Mixed districts finally stand apart, as deep purple.
+- **Below 3:1:** both today's Nonresidential and C's sit just under 3:1, so the legend and the district panel do the identifying.
+- **Tried and rejected:** one-purple ramps from dark to light. They passed, but turned whole islands pink.
+
+**What changed:**
+- [style.css](style.css): every color, font, and font size, and the repeated spacing, now comes from variables on `:root`.
+  - **Colors:** `--colorSurface`, `--colorInk`, `--colorText`, `--colorTextSoft`, `--colorTextMuted`, `--colorTextFaint`, `--colorBorderStrong`, `--colorBorder`, `--colorShadow`, `--colorRule`, `--colorError`, `--colorHouse`, and `--colorSenate`.
+  - **Fonts:** `--fontBody` and `--fontHeading`.
+  - **Font sizes:** `--fontSize3xs` (10px) through `--fontSizeLg` (20px).
+  - **Spacing:** `--spaceXs`, `--spaceSm`, and `--spaceMd`.
+  - **Layout:** `--edgeGap`, `--sidebarWidth`, and `--areaPanelWidth`. So the tablet rule's old mystery `400px` is now written as two edge gaps plus the sidebar's width.
+  - **Left as is:** sizes in `em`, which stay relative on purpose, and a few one-off nudges like 5px.
+- [scripts/map.js](scripts/map.js): `zone2color` has the new Mixed and Nonresidential colors and a note on how they were checked. It's also `const` now.
+- **Docs:** CLAUDE.md and the README.
+
+**Claude's checks** (headless Edge, `main` vs. the new code; all passed, no errors):
+- **Computed styles:** 40 properties per element, identical on every element except the zone fills and the legend's squares. That held in 9 states:
+  - **Desktop and tablet:** a fresh load, and with a district clicked.
+  - **Phone:** the drawer closed and open, the card collapsed and expanded, and the tour's first popover.
+  - **Size:** each state has 264 to 502 elements.
+- **Screenshots:** with the zones and the legend's squares hidden, all 9 states are pixel-identical to `main`.
+- **What's drawn:** Mixed districts fill with `#4a2b83` and Nonresidential with `#aa75b6`, and the legend's squares match. Primarily Residential, the not-satisfying gray, and Not Zoned are unchanged.
+- **The validator:** C passes every check as drawn, as in the table above.
+- **Missed:** the tablet "clicked" state repeated the fresh one, because the test's click landed on the sidebar. The panel's tablet position still compared equal, because computed styles cover hidden elements too.
+
+**Your checks:**
+- [ ] Run the site locally. The map looks as it did, except for two things: Mixed with Residential districts are deep purple, and Nonresidential ones are a soft orchid. The legend's squares match.
+- [ ] Open http://localhost:8000/#14/21.2905/-157.8330 (Waikīkī and Ala Moana). Waikīkī, Ala Moana, and Kakaʻako are deep purple Mixed districts, and they stand out from the magenta Primarily Residential neighborhoods inland.
+- [ ] Turn on **2-Family Housing** and zoom out to Oʻahu. Districts that don't allow it turn gray, which reads clearly differently from the orchid Nonresidential districts that do.
+- [ ] Everything else looks exactly as before: the sidebar, tooltips, the House and Senate labels, and the drawer and card on iPhone SE.
+
+**Found while checking, for a later step:** the overlay colors fail the same validator.
+- **Selection vs. waterways:** the selected county's cyan outline and the waterways' light blue look almost identical with protanopia (ΔE 0.8).
+- **Senate vs. federal land:** the Senate yellow and the federal lands' yellow-green are close even with normal vision (9.1).
+- **Faint on the basemap:** several overlays, including the Senate yellow at 1.09:1, nearly vanish against the basemap.
+
+These need their own small plan. Some were deliberate choices, such as the cyan you picked.
+
+---
+
+## Next up: a navbar, a filter refactor, and a Home page with stats (roadmap, approved)
+
+- [x] Order approved in chat (2026-10-04): 1, 2, 3. Each item gets its own detailed plan here before any code.
+
+These ideas came from our chat on 2026-10-04 and were only in chat until now. That's why the cloud session built the older drawer plan instead. The drawer stays: it moves onto the map page.
+
+1. **A navbar and two pages**, like Wea Da Bus.
+   - **Pages:** Home at `/` and the map at `/map/`. Home forwards old links (`/#zoom/lat/lng…`) to `/map/`, so every link already shared keeps working.
+   - **Navbar:** a bottom tab bar on phones (Home · Map) and the top navigation on desktop. On the map page, the drawer's bar sits just above the tab bar, the way Wea Da Bus's refresh bar sits above its tab bar.
+   - **Home, to start:** the key zoning info from the sidebar's intro: what the atlas shows, how to read it, and its sources and credits.
+   - **Standards:** the new markup and CSS follow yours (semantic HTML, custom properties, no Tachyons), which starts Features 10 and 11 for those parts.
+2. **A filter refactor.**
+   - **One config** lists every filter, and the code builds the controls from it, which was Feature 14's idea. Adding a filter becomes one entry in a list instead of hand-written HTML.
+   - **Markup:** `<fieldset>` and `<legend>` groups, and clearer controls than checkboxes that reveal more checkboxes.
+   - **Links:** the same names and values in the URL, so shared links keep working. `check_data.py` reads the config instead of `index.html`.
+   - **Where:** it fills both the desktop sidebar and the phone drawer.
+3. **Home stats and more Census data.**
+   - **Stats:** the pipeline writes a small `data/stats.json`, so Home never downloads the 12.6 MB map file. The weekly sync keeps it current.
+   - **Census:** more tables from `tools/fetchDemographics.js`, which you run, since the key stays on your machine. For example, housing units by number of units per building would show what's built next to what zoning allows.
+   - **Charts:** plain HTML and CSS, each with a table under it, so no new library.
+   - [ ] **Before any chart:** check Honolulu's 3- and 4+-family coding against the master sheet. Its Agricultural districts and R-5 through R-10 are coded as allowing them as of right, which puts 4+-family homes on 61% of Honolulu's zoned land, the same share as 1-family.
+
+**Recommended order: 1, 2, 3.**
+- **The navbar and pages come first:** they're the frame the other two live in.
+- **The filter refactor comes second:** its config becomes the one list of housing types, approval levels, and lot-size ranges, and the stats page reuses it for its labels.
+- **The Honolulu check can happen anytime before item 3,** while items 1 and 2 are built.
+
+**What happened to Features 10 and 11:** nothing yet, and neither is dropped. After Feature 9, the next plan written here was Feature 12, because you'd asked about the phone layout, so that's the one the cloud session picked up.
+- **Feature 11** (plain CSS on custom properties) starts now, with the step above.
+- **Feature 10 and the rest of 11** come with items 1 and 2:
+  - **Feature 10** is semantic HTML and accessibility.
+  - **Why not first:** items 1 and 2 rebuild the same markup, so doing 10 and 11 first would mean redoing them.
+  - **Overlays bug:** the unclosed `<div id="Overlays">` that the cloud session found gets fixed in item 2.
+
+---
+
+## Feature 12: A filters drawer and a compact area card on phones (built and committed)
 
 - [x] Started 2026-10-04 in a Claude Code cloud session, from your request to pick up where we left off. It follows the plan that was here, with the changes listed below.
 
-**Where it is:** the `claude/brave-meitner-ipdy2j` branch on your GitHub repo. Nothing is on `main`, so the live site hasn't changed.
-- **To try it:** run `git fetch origin` and `git checkout claude/brave-meitner-ipdy2j`, then run the site locally.
-- **To ship it:** merge the branch into `main`. That deploys. Or ask Claude to open a pull request.
+**Where it is:** merged into `main` on 2026-10-04 (`7b8fa24..9d83792`) and live. The cloud session built it on the `claude/brave-meitner-ipdy2j` branch.
 
 **Before, on a 375×667 phone:** the map got the top 367 px. The sidebar always took the bottom 300 px, and a tapped district's panel covered another 147 px of the map.
 
@@ -105,13 +204,32 @@ Nothing selected            District tapped             Drawer open
   - **Everything else:** Clear filters, shared links, overlays and their labels, tooltips, and zone colors behave the same.
   - **Errors:** none in any run.
 
+**Claude's checks in VS Code, before the merge** (headless Edge with the real CDNs, which the cloud session couldn't reach; `main` vs. the branch; all passed, no errors):
+- **Desktop and tablet** (1400×900, 1024×768, 768×1024): screenshots are pixel-identical to `main`, on a fresh load and with a district clicked.
+- **Phones** (375×667 and 320×568), with real touch taps:
+  - **Layout:** the map ends at the bar, with the Map/Satellite switch and the credits above it.
+  - **The drawer:** it opens to 70%, and `inert` moves between the drawer and the map's corners.
+  - **The pan:** opening moves the islands to within 1 px of the strip's middle, and closing moves them back exactly.
+  - **The rest:** "1 filter on" shows, the card is 96 px collapsed and expands and shrinks, and a shared link keeps its count.
+- **The tour** (375×667): the drawer is open for steps 1, 2, 3, 5, and 7 and closed for 4 and 6. No tap selected anything, the drawer closes at the end, and the tour is remembered.
+- **Real fonts:** step 2's popover is 45 px taller than an iPhone SE screen, the same as on `main`, so it scrolls.
+- **Regressions:** the 7 bad links, a shared link, and Clear filters give the same results as `main`.
+- **The live site, after the deploy:**
+  - **iPhone SE size:** the bar shows, the drawer opens to 467 px and closes, and a tapped district shows its card.
+  - **Desktop:** it keeps the sidebar.
+  - **Both:** all 261 districts draw, with no errors.
+- **Code review against your standards:** two deviations, neither a bug.
+  - **The drawer's CSS** uses raw colors and sizes (`white`, `rgba(0, 0, 0, 0.8)`, `0.6`, `0.1`, `16px`, `14px`, `6px`) instead of custom properties.
+  - **The new event listeners** sit inside `initMap()`, like every existing one, instead of at the bottom of `map.js`. That belongs to Feature 13.
+- [x] Decided in chat (2026-10-04): custom properties now, as Feature 11's first step (see the plan at the top).
+
 **Your checks.** In Edge or Chrome, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M) with **iPhone SE**:
 - [ ] Reload. The map fills the screen above a bar that says "Filters & overlays". The Map/Satellite switch and the credits sit just above the bar.
 - [ ] Tap the bar. The drawer opens to about two-thirds of the screen, and the map slides up so the islands show in the strip above it. Turn on **1-Family Housing**: the bar says "1 filter on", and the islands above change color. Tap the bar again: the drawer closes and the map slides back.
 - [ ] Tap a district on Oʻahu. A short card at the top shows the county's percentage, the district's name, and one line of its note. Tap the card's top row. It expands to the full sentence, the three stats, and the whole note. Tap it again, and it shrinks.
-- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
+- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. On step 2, scroll inside the popover to reach Next. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
 - [ ] Turn off the device toolbar. The desktop layout looks the same as before.
-- [ ] After you merge to `main`, try it on your own phone on the live site.
+- [ ] Try it on your own phone on the live site.
 
 **Found along the way, not changed:**
 - **`index.html`'s `<div id="Overlays">` is never closed.** So the browser puts Zone Opacity and the credits inside it, and the tour's Overlays step highlights them too.
@@ -119,7 +237,7 @@ Nothing selected            District tapped             Drawer open
   - **Where it belongs:** the "Semantic HTML and accessibility" item.
 - **Overlay messages on phones** only show on screen when the drawer is open, but screen readers hear them either way. Before, they sat in the panel under the map, usually scrolled out of view.
 - **Rotating mid-tour across 600 px** keeps the drawer right, but the step 3 text stays worded for the orientation the tour started in.
-- **Tour step 2's popover** is taller than a 320×568 screen, so its Next button needs a scroll there. That's unchanged from before.
+- **Tour step 2's popover** is taller than a 320×568 screen, and, with the real fonts, an iPhone SE's 375×667 one. So its Next button needs a scroll there. That's unchanged from before.
 
 **Left for later** (round 2 testers' reports, all minor; I didn't reproduce them separately):
 - **A district tapped while the drawer is open:** if it's in a new county, the zoom fits that county to the whole map, so part of the county is behind the drawer.
