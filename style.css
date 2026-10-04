@@ -5,6 +5,8 @@
   --phoneGap: 8px;
   /* Leaflet's zoom buttons plus a gap, so boxes along the top stop short of them */
   --zoomButtonsClearance: 54px;
+  /* Tallest a district's note gets in the area panel before it scrolls */
+  --noteMaxHeight: 12em;
 }
 
 body {
@@ -94,6 +96,32 @@ hr {
 /* Two classes so this outranks the 24px in Google's .material-icons rule */
 .areaStats .statIcon {
   font-size: 16px;
+}
+
+/* The clicked district under the county stats (see buildDistrictDetails) */
+.districtDetails {
+  margin-top: 0.75em;
+  padding-top: 0.75em;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+}
+
+.districtName {
+  margin: 0;
+  font-weight: bold;
+}
+
+.districtFlags {
+  margin: 0.25em 0 0;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Keeps the notes' own line breaks, and scrolls when a note runs long */
+.districtNote {
+  margin: 0.25em 0 0;
+  max-height: var(--noteMaxHeight);
+  overflow-y: auto;
+  white-space: pre-line;
 }
 
 /* Loading and error message at the top of the map */
@@ -239,6 +267,33 @@ Media queries
     right: var(--zoomButtonsClearance);
     width: auto;
     margin-left: 0;
+  }
+
+  /* The panel keeps to the top of the small map, so the middle stays free for
+     tapping. It scrolls as one box, rather than a note box scrolling inside
+     a scrolling panel. */
+  #activeAreaCalculator {
+    max-height: calc(var(--phoneMapHeight) * 0.4);
+    overflow-y: auto;
+  }
+
+  :root {
+    --noteMaxHeight: none;
+  }
+
+  /* Phones have no tooltip, so the tapped district comes first, above the
+     county stats. :not(.dn) keeps Tachyons' dn able to hide the panel. */
+  #activeAreaCalculator:not(.dn) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .districtDetails {
+    order: -1;
+    margin: 0 0 0.75em;
+    padding: 0 0 0.75em;
+    border-top: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 
   /* Two classes to match Leaflet's own rule, which this file loads after */
