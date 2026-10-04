@@ -1,3 +1,5 @@
+import sys
+
 import petl as etl
 from validators import validate_abbr_district_name, validate_county
 from validators import validate_jurisdiction, validate_state
@@ -124,7 +126,9 @@ constraints = [
     ),
 ]
 
-table_full = etl.fromcsv("../hawaii-zoning-data.csv")
+# The CSV to check: the first argument, or the pipeline's input by default
+csv_path = sys.argv[1] if len(sys.argv) > 1 else "../hawaii-zoning-data.csv"
+table_full = etl.fromcsv(csv_path)
 table = etl.tail(table_full, table_full.len() - 2)
 problems = etl.validate(table, constraints=constraints, header=headers)
 if problems.len() > 2:
