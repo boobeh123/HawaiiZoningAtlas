@@ -6,6 +6,11 @@ let districtActive = null // Properties of the clicked district, shown in the ar
 // Phones: the same breakpoint as the Media queries block in style.css
 const phoneMediaQuery = '(max-width: 600px)'
 
+// Phones: whether the filters drawer is open (see setDrawerOpen), and whether
+// the area card shows everything or only its first lines (see buildAreaCardToggle)
+let drawerOpen = false
+let areaCardExpanded = false
+
 // Phones and touch-only screens get no district tooltips (see syncZoneTooltips)
 const noTooltipsQuery = matchMedia(`${phoneMediaQuery}, (hover: none)`)
 
@@ -288,6 +293,7 @@ var loadZones = function (geojson) {
     syncOverlays()
 
     updateResetButton()
+    updateDrawerFilterCount()
   })
 
   document.querySelector('#resetFilters').addEventListener('click', clearFilters)
@@ -368,6 +374,7 @@ const setFilters = () => {
   $('.at-least-one-checked:not(:has( input:checked ))').addClass('bg-light-red')
 
   updateResetButton()
+  updateDrawerFilterCount()
 }
 
 /*
@@ -461,15 +468,60 @@ const drawCountyOutlines = () => {
 }
 
 /*
+ * Counts the housing filter groups that are on. Overlay checkboxes don't
+ * count, because they aren't filters.
+ */
+const countHousingFilters = () =>
+  [...document.querySelectorAll('#form .main-in-group:checked')].filter(
+    (checkbox) => checkbox.name !== 'Overlay'
+  ).length
+
+/*
  * Shows the Clear filters button while a housing filter is on or a county is
- * selected. Overlay checkboxes don't count, because they aren't filters.
+ * selected
  */
 const updateResetButton = () => {
-  const housingFilterOn = [
-    ...document.querySelectorAll('#form .main-in-group:checked'),
-  ].some((checkbox) => checkbox.name !== 'Overlay')
   document.querySelector('#resetFilters').hidden =
-    !housingFilterOn && !townActive
+    countHousingFilters() === 0 && !townActive
+}
+
+/*
+ * Phones: says on the drawer's bar how many housing filters are on, so they
+ * aren't forgotten while the drawer is closed
+ */
+const updateDrawerFilterCount = () => {
+  const count = countHousingFilters()
+  document.querySelector('#drawerFilterCount').textContent =
+    count === 0 ? '' : `${count} ${count === 1 ? 'filter' : 'filters'} on`
+}
+
+/*
+ * Phones: opens or closes the filters drawer. While it's closed, its
+ * contents are inert, so the keyboard and screen readers skip them. Wider
+ * screens always show the whole sidebar, so nothing is inert there.
+ * `animate: false` skips the slide, for the tour's changes.
+ */
+const setDrawerOpen = (open, { animate = true } = {}) => {
+  const sidebar = document.querySelector('#sidebar')
+  const toggle = document.querySelector('#drawerToggle')
+  drawerOpen = open
+
+  if (!animate) {
+    sidebar.classList.add('drawerNoTransition')
+  }
+  sidebar.classList.toggle('drawerOpen', open)
+  toggle.setAttribute('aria-expanded', String(open))
+  toggle.querySelector('.material-icons').textContent = open
+    ? 'expand_more'
+    : 'expand_less'
+  document.querySelector('#HiZoningAtlas').inert =
+    matchMedia(phoneMediaQuery).matches && !open
+
+  if (!animate) {
+    // Reading the height applies it before the transition comes back
+    void sidebar.offsetHeight
+    sidebar.classList.remove('drawerNoTransition')
+  }
 }
 
 /*
@@ -524,6 +576,38 @@ const buildDistrictDetails = (properties) => {
       : createTextElement('p', 'No notes for this district.', 'districtNote black-50')
   )
   return details
+}
+
+/*
+ * Phones: the area card's header, with the county's percentage. It expands
+ * the card from its first lines to everything, and back (see style.css).
+ * It toggles in place, so focus stays on it.
+ */
+const buildAreaCardToggle = (satisfiesPerc) => {
+  const toggle = createTextElement('button', '', 'areaCardToggle')
+  toggle.type = 'button'
+  const icon = createTextElement('span', '', 'material-icons')
+  icon.setAttribute('aria-hidden', 'true')
+
+  const showExpanded = () => {
+    toggle.setAttribute('aria-expanded', String(areaCardExpanded))
+    icon.textContent = areaCardExpanded ? 'expand_less' : 'expand_more'
+    document
+      .querySelector('#activeAreaCalculator')
+      .classList.toggle('areaExpanded', areaCardExpanded)
+  }
+
+  toggle.append(
+    // townActive can come from the URL, so it's set as text
+    createTextElement('span', `${satisfiesPerc}% of ${townActive}`),
+    icon
+  )
+  toggle.addEventListener('click', () => {
+    areaCardExpanded = !areaCardExpanded
+    showExpanded()
+  })
+  showExpanded()
+  return toggle
 }
 
 /*
@@ -602,6 +686,8 @@ const calculateActiveArea = () => {
   if (totalAcres === 0) {
     calculator.replaceChildren()
     calculator.classList.add('dn')
+    // On phones, the next county starts with the short card again
+    areaCardExpanded = false
     return
   }
 
@@ -615,7 +701,7 @@ const calculateActiveArea = () => {
   municipalArea.title =
     'Excludes state- and federal-owned land, and unzoned parts of town'
 
-  const summary = createTextElement('p', '', 'ma0 mb2')
+  const summary = createTextElement('p', '', 'ma0 mb2 areaSummary')
   summary.append(
     `${Math.trunc(satisfiesAcres).toLocaleString()} acres, or ${satisfiesPerc}% of `,
     municipalArea,
@@ -623,7 +709,8 @@ const calculateActiveArea = () => {
     createTextElement('strong', townActive),
     ` (${Math.trunc(totalAcres).toLocaleString()} acres) satisfies your filtering criteria.`
   )
-  calculator.replaceChildren(summary)
+  // The header only shows on phones
+  calculator.replaceChildren(buildAreaCardToggle(satisfiesPerc), summary)
 
   // Stats exist only for the counties listed in data/demographics.js
   if (Object.hasOwn(demographics, townActive)) {
@@ -1241,6 +1328,16 @@ var initMap = function () {
     }
   ).addTo(map)
 
+  // Phones: the filters drawer starts closed. Rotating into the tablet layout
+  // or back changes whether its contents should be inert.
+  document
+    .querySelector('#drawerToggle')
+    .addEventListener('click', () => setDrawerOpen(!drawerOpen))
+  setDrawerOpen(false, { animate: false })
+  matchMedia(phoneMediaQuery).addEventListener('change', () =>
+    setDrawerOpen(drawerOpen, { animate: false })
+  )
+
   setFilters()
 
   // Load the county outlines and the zones, with a message while they download
@@ -1284,12 +1381,63 @@ var initMap = function () {
   // 	}
   // })
 
+  // Phones: Driver.js changes steps on touchstart, so the browser's click
+  // for that same tap lands on whatever the new step puts under the finger,
+  // like the drawer's bar or a district. Each step change swallows that one
+  // click. The next press of any kind disarms it, in case no click comes.
+  let swallowNextClick = false
+  document.addEventListener(
+    'pointerdown',
+    () => {
+      swallowNextClick = false
+    },
+    true
+  )
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (swallowNextClick) {
+        swallowNextClick = false
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    },
+    true
+  )
+
+  // Phones: the tour opens the drawer, lower than usual, for the steps
+  // inside it, and closes it for the map's own steps. Driver.js calls this
+  // before it measures the step's element.
+  const showTourStep = (element) => {
+    if (!matchMedia(phoneMediaQuery).matches) return
+    swallowNextClick = true
+    const sidebar = document.querySelector('#sidebar')
+    const isInDrawer = sidebar.contains(element.node)
+    sidebar.classList.toggle('drawerTour', isInDrawer)
+    setDrawerOpen(isInDrawer, { animate: false })
+  }
+
+  // Where the filters are: a drawer on phones, a panel on the left elsewhere
+  const filtersPlace = matchMedia(phoneMediaQuery).matches
+    ? 'the <strong>Filters &amp; overlays</strong> panel'
+    : 'the menu on the left-hand side of this screen'
+
   // Start tour
   var driver = new Driver({
     animate: false,
     allowClose: false,
+    onHighlightStarted: showTourStep,
     // Driver.js calls this when the tour is closed or finished
-    onReset: rememberTourSeen,
+    onReset: () => {
+      rememberTourSeen()
+      // Phones: the map gets the screen back, and the tap on Close or Done
+      // can't select the district that's now under it
+      if (matchMedia(phoneMediaQuery).matches) {
+        swallowNextClick = true
+        document.querySelector('#sidebar').classList.remove('drawerTour')
+        setDrawerOpen(false, { animate: false })
+      }
+    },
   })
   // Define the steps for introduction
   driver.defineSteps([
@@ -1318,9 +1466,8 @@ var initMap = function () {
       element: '#PermittedResidentialUses',
       popover: {
         title: 'Select Permitted Residential Uses',
-        description:
-          '<p>Select one or more of the <strong>Permitted Residential Uses</strong> from the menu on the left-hand side of this screen. The purple and pink hues on the map will show you what kind of zoning district the chosen residential use appears in.</p>\
-        <p>Explore the specific conditions under which your selected Permitted Residential Use is allowed, like <strong>minimum lot size</strong> requirements, <strong>public hearing</strong> requirements, or restrictions for <strong>elderly housing</strong>.</p>',
+        description: `<p>Select one or more of the <strong>Permitted Residential Uses</strong> from ${filtersPlace}. The purple and pink hues on the map will show you what kind of zoning district the chosen residential use appears in.</p>\
+        <p>Explore the specific conditions under which your selected Permitted Residential Use is allowed, like <strong>minimum lot size</strong> requirements, <strong>public hearing</strong> requirements, or restrictions for <strong>elderly housing</strong>.</p>`,
         position: 'right',
       },
       onNext: function () {

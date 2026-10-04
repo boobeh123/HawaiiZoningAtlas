@@ -1,7 +1,13 @@
 :root {
-  /* Phone layout (see Media queries): the map's share of the screen, and the
-     gap between floating boxes and the screen edge */
-  --phoneMapHeight: 55dvh;
+  /* Phone drawer (see Media queries): the bar that always shows, the drawer's
+     height when open, and its lower height during the tour, which leaves the
+     tour's popovers the room they had above the old 55/45 split */
+  --drawerBarHeight: 48px;
+  --drawerOpenHeight: 70dvh;
+  --drawerTourHeight: 45dvh;
+  /* Phone layout (see Media queries): the map fills the screen above the
+     drawer's bar, and floating boxes keep this gap from the screen edge */
+  --phoneMapHeight: calc(100dvh - var(--drawerBarHeight));
   --phoneGap: 8px;
   /* Leaflet's zoom buttons plus a gap, so boxes along the top stop short of them */
   --zoomButtonsClearance: 54px;
@@ -174,6 +180,13 @@ hr {
   display: none;
 }
 
+/* The drawer's bar and the area card's toggle are for phones only (see Media
+   queries) */
+#drawerToggle,
+.areaCardToggle {
+  display: none;
+}
+
 .leaflet-tooltip {
   width: 230px;
   white-space: normal !important;
@@ -242,23 +255,88 @@ hr {
 Media queries
 ***************************************************************/
 
-/* Phones: the map takes the top of the screen, and the sidebar becomes a
-   panel underneath it with its own scrolling. initMap() uses the same 600px
-   breakpoint to start phones zoomed out. */
+/* Phones: the map fills the screen above a drawer that holds the sidebar.
+   initMap() uses the same 600px breakpoint to start phones zoomed out. */
 @media screen and (max-width: 600px) {
+  /* Ending above the drawer's bar keeps the Map/Satellite switch and the
+     credits clear of it */
   #map {
     height: var(--phoneMapHeight);
   }
 
+  /* The sidebar becomes a drawer along the bottom. Closed, only its bar
+     shows (see setDrawerOpen). It grows instead of sliding, because Driver.js
+     turns off transforms on the parents of the tour's highlighted elements.
+     Open, it covers part of the map, so it goes above Leaflet's controls
+     (z-index 1000). */
   #sidebar {
-    top: var(--phoneMapHeight);
+    z-index: 1001 !important;
+    top: auto;
+    bottom: 0;
     left: 0;
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    height: calc(100dvh - var(--phoneMapHeight));
+    height: var(--drawerBarHeight);
     max-height: none;
+    padding: 0;
+    overflow: hidden;
     border-radius: 0;
     opacity: 1;
     box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
+    transition: height 0.2s ease-out;
+  }
+
+  /* Open, it leaves the top of the map showing, so the filters' effect stays
+     in view */
+  #sidebar.drawerOpen {
+    height: var(--drawerOpenHeight);
+  }
+
+  #sidebar.drawerOpen.drawerTour {
+    height: var(--drawerTourHeight);
+  }
+
+  /* For changes that happen at once, like the tour's */
+  #sidebar.drawerNoTransition {
+    transition: none;
+  }
+
+  #drawerToggle {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: var(--drawerBarHeight);
+    padding: 0 16px;
+    border: 0;
+    background-color: white;
+    color: rgba(0, 0, 0, 0.8);
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.03em;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  #sidebar.drawerOpen #drawerToggle {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* How many housing filters are on, at the bar's right end */
+  #drawerFilterCount {
+    margin-left: auto;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+  }
+
+  /* The drawer's contents scroll on their own, under the bar */
+  #HiZoningAtlas {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
   }
 
   /* Across the top of the map, clear of the zoom buttons */
@@ -269,7 +347,7 @@ Media queries
     margin-left: 0;
   }
 
-  /* The panel keeps to the top of the small map, so the middle stays free for
+  /* The area card keeps to the top of the map, so the middle stays free for
      tapping. It scrolls as one box, rather than a note box scrolling inside
      a scrolling panel. */
   #activeAreaCalculator {
@@ -277,23 +355,72 @@ Media queries
     overflow-y: auto;
   }
 
+  /* With the drawer open, the card fits in the strip of map above it */
+  body:has(#sidebar.drawerOpen) #activeAreaCalculator {
+    max-height: calc(100dvh - var(--drawerOpenHeight) - 10px - var(--phoneGap));
+  }
+
   :root {
     --noteMaxHeight: none;
   }
 
-  /* Phones have no tooltip, so the tapped district comes first, above the
-     county stats. :not(.dn) keeps Tachyons' dn able to hide the panel. */
+  /* Phones have no tooltip, so the card leads with the county's percentage
+     and the tapped district, above the county stats. :not(.dn) keeps
+     Tachyons' dn able to hide the card. */
   #activeAreaCalculator:not(.dn) {
     display: flex;
     flex-direction: column;
   }
 
+  /* The card's header: the percentage, and the button that expands the card
+     (see buildAreaCardToggle) */
+  .areaCardToggle {
+    display: flex;
+    order: -2;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: bold;
+    letter-spacing: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
   .districtDetails {
     order: -1;
-    margin: 0 0 0.75em;
+    margin: 0.5em 0 0;
     padding: 0 0 0.75em;
     border-top: 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  #activeAreaCalculator .areaSummary {
+    margin-top: 0.75em;
+  }
+
+  /* Collapsed, the card shows just the percentage, the district's name, and
+     the first line of its note */
+  #activeAreaCalculator:not(.areaExpanded) .areaSummary,
+  #activeAreaCalculator:not(.areaExpanded) .areaStats,
+  #activeAreaCalculator:not(.areaExpanded) .districtFlags {
+    display: none;
+  }
+
+  #activeAreaCalculator:not(.areaExpanded) .districtDetails {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  #activeAreaCalculator:not(.areaExpanded) .districtNote {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   /* Two classes to match Leaflet's own rule, which this file loads after */
