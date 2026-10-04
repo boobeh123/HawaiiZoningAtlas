@@ -171,6 +171,7 @@ Our research team read the complete zoning codes of all four counties and record
 * A guided intro tour that shows only on the first visit
 * County stats generated from the Census API by a Node script, so the API key never reaches the browser
 * Data pipeline in Python that joins the research spreadsheet to each county's GIS zoning map
+* Weekly GitHub Actions sync that pulls the research spreadsheet, rebuilds and checks the map data, and deploys any changes
 
 ### Technologies
 <img src="https://img.shields.io/badge/html5%20-%23E34F26.svg?&style=for-the-badge&logo=html5&logoColor=white" alt="HTML" height="50"/><img src="https://img.shields.io/badge/css3%20-%231572B6.svg?&style=for-the-badge&logo=css&logoColor=white" alt="CSS" height="50"/><img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" height="50"/><img src="https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white" alt="jQuery" height="50"/><img src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" alt="Leaflet" height="50"/><img src="https://img.shields.io/badge/node.js%20-3F873F.svg?&style=for-the-badge&logo=node.js&logoColor=white" alt="Node" height="50"/><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" height="50"/><img src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" alt="pandas" height="50"/><img src="https://img.shields.io/badge/GeoPandas-139C5A?style=for-the-badge&logo=geopandas&logoColor=white" alt="GeoPandas" height="50"/><img src="https://img.shields.io/badge/Jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter" height="50"/><img src="https://img.shields.io/badge/QGIS-589632?style=for-the-badge&logo=qgis&logoColor=white" alt="QGIS" height="50"/><img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" height="50"/><img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify" height="50"/>
@@ -198,6 +199,12 @@ The **Jupyter** notebook [CombineJurisdictions.ipynb](data-pipeline/CombineJuris
 3. Measures each district in an equal-area projection (EPSG:6933), then subtracts federal and state land, which counties can't zone. What's left is the district's zoned acreage (`MA`), which the area calculator adds up
 4. Turns the spreadsheet's answers into filter values with **pandas**. For example, minimum lot sizes are grouped into five ranges, from none to 1.84+ acres
 5. Shortens the column names and values to keep the file small (`1-Family Treatment: Allowed/Conditional` becomes `1F: A`), simplifies the shapes to within about 2 m, and writes `final.geojson`, which is copied to [data/final.geojson](data/final.geojson)
+
+Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows/spreadsheet.yml)) keeps the map in sync with the spreadsheet:
+- [pull_sheet.py](data-pipeline/pull_sheet.py) reads the sheet without editing it, and fixes a few known problems on the way in.
+- If anything changed, the workflow reruns the notebook.
+- [check_data.py](data-pipeline/check_data.py) then confirms that every county and every filter still works.
+- Finally, the workflow commits the new data with a plain-language list of what changed, and Netlify deploys it. If any check fails, nothing is pushed.
 
 #### The website
 
@@ -232,7 +239,9 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 | `python -m http.server 8000` | Serves the site at http://localhost:8000. The map's data can't load from `file://` |
 | `node --env-file=.env tools/fetchDemographics.js --check` | Shows which Census release and definitions match the current county stats, without writing anything |
 | `node --env-file=.env tools/fetchDemographics.js 2024` | Rewrites `data/demographics.js` from the 2020–2024 release. Needs `CENSUS_API_KEY` in `.env` (see `.env.example`) |
-| Run [CombineJurisdictions.ipynb](data-pipeline/CombineJurisdictions.ipynb) from `data-pipeline/` | Rebuilds `final.geojson` from the spreadsheet CSV and the county maps. Its packages are listed in [data-pipeline/requirements.txt](data-pipeline/requirements.txt) |
+| `python pull_sheet.py` (from `data-pipeline/`) | Pulls the spreadsheet into `hawaii-zoning-data.csv` and lists what changed |
+| `jupyter execute CombineJurisdictions.ipynb` (from `data-pipeline/`) | Rebuilds `final.geojson` from the spreadsheet CSV and the county maps. The full steps are in [data-pipeline/README.md](data-pipeline/README.md) |
+| `python check_data.py` (from `data-pipeline/`) | Checks the rebuilt map data before you commit it |
 
 #### What's changed in this rebuild
 
@@ -248,10 +257,11 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Mobile layout:** phones get the map above a scrolling filter panel, and on tablets the area panel no longer slides under the sidebar
 - **Clear filters:** the button now also clears the county from the URL, leaves the overlays on, shows only when there's something to clear, and works from the keyboard
 - **Selected county:** outlined in thick cyan above the House and Senate lines, where it used to be a thin yellow line that blended into the Senate districts
+- **Spreadsheet sync:** the GitHub Action that pulls the research spreadsheet works again, weekly. It now also rebuilds the map data, checks it, and deploys it
 
 #### Up next
 
-- Revive the GitHub Actions that sync the spreadsheet into the repo
+- Show the spreadsheet's Special Notes in the district tooltips
 - Shrink `final.geojson`, which is about 25 MB today
 - Semantic HTML and accessibility
 - Replace Tachyons with plain CSS
