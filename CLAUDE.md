@@ -48,7 +48,7 @@ Don't use the `data-pipeline/Dockerfile`. Its `CMD` runs `hzadata.py`, which doe
 
 ## Deployment
 
-The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (12.6 MB, about 3.2 MB as Netlify's Brotli sends it) and `counties.geojson`, plus each overlay's file the first time its box is checked. House and Senate are checked by default. Keep committed GeoJSON simplified and minified. `data-pipeline/shrink_geojson.py` rounds coordinates to 5 decimal places and drops the spaces.
+The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (12.6 MB, about 3.0 MB as Netlify's Brotli sends it) and `counties.geojson`, plus each overlay's file the first time its box is checked. House and Senate are checked by default. Keep committed GeoJSON simplified and minified. `data-pipeline/shrink_geojson.py` rounds coordinates to 5 decimal places and drops the spaces.
 
 **Keys.** Anything the browser loads is public, so only public keys belong in site code.
 - **CARTO basemap keys:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs. There are two keys. On `localhost` and `127.0.0.1` the map uses the localhost key, and everywhere else it uses the production key.
@@ -65,9 +65,25 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
 - **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
-  - **Phones (600px and narrower):** the map takes the top `--phoneMapHeight` (55dvh) of the screen, and `#sidebar` is a scrolling panel under it.
+  - **Phones (600px and narrower):** the map fills the screen above a 48px bar (`--phoneMapHeight`), and `#sidebar` is a drawer along the bottom.
     - **Same breakpoint in JS:** `phoneMediaQuery` in `map.js`. `initMap()` uses it to start phones at zoom 6.
-    - **The area panel:** it's capped at 40% of the map's height and scrolls as one box, with the tapped district first (flex `order`). `#activeAreaCalculator:not(.dn)` keeps Tachyons' `dn` able to hide it.
+    - **The drawer:** the bar is `#drawerToggle`. `setDrawerOpen()` toggles `.drawerOpen` (70dvh) and `aria-expanded`.
+      - **Closed:** `#HiZoningAtlas` is `inert`, so Tab and screen readers skip it.
+      - **Open:** it covers the map's bottom corners, so `.leaflet-bottom` is `inert` instead. It sits at z-index 1001, above Leaflet's controls (1000).
+      - **Grows instead of sliding:** Driver.js's `.driver-fix-stacking` forces `transform: none` on the highlighted element's parents.
+      - **`overflow: clip`:** unlike `hidden`, it can't be scrolled, so a rotation or a `#link` can't shift the bar out of place.
+      - **Filter count:** `#drawerFilterCount` shows how many housing filters are on. `countHousingFilters()` is shared with `updateResetButton()`.
+      - **Overlay messages:** `#overlayStatus` is inside the drawer, so while it's inert `syncOverlayAnnouncement()` copies it to the hidden live region `#overlayStatusAnnounce`.
+    - **The area card:** `buildAreaCardToggle()` adds a header ("56.8% of Honolulu") that's hidden on wider screens.
+      - **Collapsed:** only the header, the district's name, and one line of its note show. `.areaExpanded` shows everything.
+      - **Expanded:** it stays expanded while you switch districts, and resets when the card closes.
+      - **Size:** it's capped at 40% of the map's height, or the strip above the open drawer, and scrolls as one box. The tapped district comes first (flex `order`).
+      - **Hiding:** `#activeAreaCalculator:not(.dn)` keeps Tachyons' `dn` able to hide it.
+    - **The tour:** `showTourStep()` opens the drawer for steps inside `#sidebar` and closes it for the map's steps.
+      - **Drawer height:** `.drawerTour` holds it at 45dvh, so the popovers keep room.
+      - **Placement:** each step's element goes as low in the drawer as it fits.
+      - **Stray taps:** Driver.js changes steps on `touchstart`, so the tap's own click would land on whatever the new step put under the finger. After a touch step change, `swallowNextClick` eats that one click.
+      - **The bar:** it does nothing while the tour runs.
   - **601–1139px:** the area panel moves beside the sidebar. A centered panel would overlap it.
   - **Tour popovers on phones:** they're pinned across the top with `!important`, because Driver.js positions them inline and `driver.min.css` loads after `style.css`.
 - **Data loading.** `initMap()` calls `loadMapData()`, which uses `fetch` to get `data/counties.geojson` (non-interactive county outlines) and `data/final.geojson` (zoning districts). `#mapStatus` shows "Loading zoning data…" until the zones arrive, or an error if they don't.
