@@ -155,7 +155,7 @@ Our research team read the complete zoning codes of all four counties and record
 
 ### Features
 * Static webpage deployed on Netlify
-* Responsive to mobile viewports: on phones, the filters sit in a scrolling panel under the map
+* Responsive to mobile viewports: on phones, the map fills the screen, the filters slide up in a drawer, and a tapped district shows a short card that expands to the full details
 * Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
 * County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
@@ -221,7 +221,7 @@ Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows
 - **Basemaps:** CARTO's light basemap or Esri satellite imagery, with CARTO's place names drawn above the zoning districts. There's one CARTO API key for local development and another for the live site
 - **Analytics:** Google Analytics loads from [scripts/analytics.js](scripts/analytics.js) and skips local visits
 - **Intro tour:** **Driver.js** walks first-time visitors through the map, and a localStorage flag keeps it from showing again
-- **Phones:** at 600px wide and below, the map takes the top of the screen, and the sidebar becomes a scrolling panel underneath. Phones also open zoomed out, with every county in view
+- **Phones:** at 600px wide and below, the map fills the screen above a "Filters & overlays" bar. The bar opens the sidebar as a drawer over the lower part of the map, and says how many housing filters are on. Tapping a district shows a short card with the county's percentage, the district's name, and the first line of its notes, which expands to everything. Phones also open zoomed out, with every county in view
 
 #### County stats
 
@@ -261,10 +261,10 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Spreadsheet sync:** the GitHub Action that pulls the research spreadsheet works again, weekly. It now also rebuilds the map data, checks it, and deploys it
 - **District notes:** the researchers' Special Notes now show for 161 districts, including why Hawaiʻi County's farm districts count 1-family homes as prohibited
 - **Phones:** no tooltips covering the small map, and tapping a district never zooms out
-- **Smaller map data:** the zoning file is half its old size (25.4 → 12.6 MB, or 8.6 → about 3.2 MB as sent), so the map loads in 3.6 s instead of 8.5 s on a 10 Mbps connection. The county outlines and the rail line shrank too, and the map looks the same
+- **Smaller map data:** the zoning file is half its old size (25.4 → 12.6 MB, or 8.6 → about 3.0 MB as sent), so the map loads in 3.6 s instead of 8.5 s on a 10 Mbps connection. The county outlines and the rail line shrank too, and the map looks the same
+- **Phone drawer:** the map now fills a phone's screen. The filters open in a drawer from a bar along the bottom, and a tapped district shows a short card instead of a panel covering much of the map. The intro tour opens and closes the drawer as it goes
 
 #### Up next
 
 - Semantic HTML and accessibility
 - Replace Tachyons with plain CSS
-- A mobile drawer: a button to hide and show the filter panel on phones
