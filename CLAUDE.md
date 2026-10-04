@@ -27,26 +27,24 @@ node --env-file=.env tools/fetchDemographics.js --check   # which release and de
 node --env-file=.env tools/fetchDemographics.js 2024      # rewrite data/demographics.js from the 2020–2024 release
 ```
 
-**CSV validation.** Run from `data-pipeline/csv-validation/`, since it reads `../hawaii-zoning-data.csv` relative to the working directory:
+**Data pipeline.** `data-pipeline/README.md` has the full steps. Run these from `data-pipeline/`; the pins in `requirements.txt` were tested on Python 3.13.
 
 ```sh
-pip install -r requirements.txt   # petl, black
-python validation.py              # prints "Success!" or raises "Invalid Data"
-```
-
-**Notebook.** Run it from `data-pipeline/`. The pins in `requirements.txt` were tested on Python 3.13.
-
-```sh
-pip install -r requirements.txt
+pip install -r requirements.txt -r csv-validation/requirements.txt
+python pull_sheet.py                         # sheet → hawaii-zoning-data.csv, prints what changed
+(cd csv-validation && python validation.py ../hawaii-zoning-data.csv)   # prints "Success!" or raises "Invalid Data"
 jupyter execute CombineJurisdictions.ipynb   # about a minute; writes final.geojson and final.csv here
 cp final.geojson ../data/final.geojson       # the site reads data/final.geojson
+python check_data.py                         # exits 1 if the map data looks broken
 ```
 
-`jupyter execute` doesn't show cell output, and `read_zoning_file()` swallows load errors. So after a run, count the `T` values (see Inspecting data) to confirm all four counties are there. `HOME_DIRECTORY` defaults to `.`. The manually triggered `hza-data-notebook.yml` action runs the notebook through papermill and sets `HOME_DIRECTORY` from `.github/params.json`.
+- **`jupyter execute` stays quiet:** it doesn't show cell output, and `read_zoning_file()` swallows load errors. `check_data.py` catches a missing county.
+- **`HOME_DIRECTORY`:** it defaults to `.`. The manually triggered `hza-data-notebook.yml` action runs the notebook through papermill and sets `HOME_DIRECTORY` from `.github/params.json`.
+- **Windows line endings:** the global `core.autocrlf=true` checks the CSV out with CRLF. `pull_sheet.py` keeps whichever line endings the file already has, so a run with no sheet changes leaves `git status` clean.
 
 **Python tooling.** `black` is pinned in `csv-validation/requirements.txt` and `flake8` in `data-pipeline/requirements.txt`. The code uses black's 4-space indent, which contradicts the 2 spaces set in `.pylintrc`.
 
-Don't follow the Docker steps in `data-pipeline/README.md`. The Dockerfile's `CMD` runs `hzadata.py`, which doesn't exist.
+Don't use the `data-pipeline/Dockerfile`. Its `CMD` runs `hzadata.py`, which doesn't exist.
 
 ## Deployment
 
@@ -112,7 +110,14 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 
 ## Data pipeline (spreadsheet → `data/final.geojson`)
 
-1. **Source.** A Google Sheet with one tab per county. `spreadsheet.yml` (daily cron) pulls and merges the tabs and commits `data/hawaii-zoning-data.csv`. Nothing reads that copy. The pipeline's real input is `data-pipeline/hawaii-zoning-data.csv`, which is updated by hand.
+1. **Source.** The research team's Google Sheet, with one tab per county. It's the team's record, so it's only ever read, never edited. The weekly sync is `spreadsheet.yml`: Mondays at 10:00 UTC, plus a **Run workflow** button.
+   - **Pull:** `pull_sheet.py` downloads the four tabs through Google's public CSV export and writes `data-pipeline/hawaii-zoning-data.csv`, the notebook's input.
+   - **Corrections on the way in:** it changes the sheet's "Kauaʻi" to "Kauai", fills in Maui `P`'s blank State, Jurisdiction, and County, and fixes the `OD/PD` typo.
+   - **Format:** it takes both header rows from Maui's tab and refuses to run if any tab's column names differ. With an unchanged sheet, its output is byte-identical to the committed CSV.
+   - **Checks:** `validation.py` checks the CSV. If it changed, the workflow runs the notebook, and `check_data.py` checks the result: all four counties, no county losing over a fifth of its districts, every checkbox still matching, and flag formats.
+   - **Push:** after the checks, `github-actions[bot]` commits with `pull_sheet.py`'s summary of changed cells and pushes to `main`, which deploys. A failure pushes nothing, and GitHub emails the owner.
+   - **Old copy:** `data/hawaii-zoning-data.csv` is from the old sync. Nothing writes or reads it now.
+   - **Inactivity:** GitHub pauses scheduled workflows after 60 days without repo activity. Re-enable it from the Actions tab.
 2. **Reading the CSV.**
    - **Two header rows:** the CSV starts with a row of section numbers, then the column names. The notebook reads it with `skiprows=1`.
    - **Blank cells:** the CSV is read with an explicit `blank_values` list, pandas' usual list without `None`. Newer pandas reads the text `None` as blank, but the researchers use it as an answer.
