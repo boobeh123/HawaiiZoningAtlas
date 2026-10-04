@@ -6,7 +6,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 9: Shrink the map's data files (built, not committed yet)
+## Feature 9: Shrink the map's data files (built and committed)
 
 - [x] Plan approved in chat (2026-10-04). **Waterways:** you chose to keep their fields, so `hydro.min.geojson` is unchanged.
 
@@ -49,11 +49,11 @@ Netlify sends today's `final.geojson` as 8.6 MB, so expect about 3.2 MB once thi
 - **Not from this change:** House and Senate lines stack in whichever order their files finish downloading, so their shared borders show pink on some loads and yellow on others. That's been true since both became checked by default.
 
 **Your checks:**
-- [ ] Run the site locally. Zoom to street level in Honolulu and in Hilo. The districts line up with the streets as before, with no new gaps or slivers.
-- [ ] Click one district in each county, then click the same districts on https://hawaiizoningatlas.netlify.app. The area panel's acres and percentages match.
-- [ ] Turn on Transit Stations (Rail). The rail line follows its route, with the stations on it.
-- [ ] Optional, in Git Bash from the repo root: `~/hza/Scripts/python -X utf8 -c "import geopandas as gpd; print((~gpd.read_file('data/final.geojson').is_valid).sum())"` prints `0`, meaning no invalid shapes.
-- [ ] After you push, in Git Bash: `curl -s -H 'Accept-Encoding: br' -o /dev/null -w '%{size_download}\n' https://hawaiizoningatlas.netlify.app/data/final.geojson` prints about 3200000 (bytes). Before this change it printed 8621444.
+- [X] Run the site locally. Zoom to street level in Honolulu and in Hilo. The districts line up with the streets as before, with no new gaps or slivers.
+- [X] With no filters checked, click one district in each county. The area panel's county totals match the ones from before this change: Hawaii 1,046,964 acres, Honolulu 210,239, Kauai 192,516, and Maui 477,001.
+- [X] Turn on Transit Stations (Rail). The rail line follows its route, with the stations on it.
+- [X] Optional, in Git Bash from the repo root: `~/hza/Scripts/python -X utf8 -c "import geopandas as gpd; print((~gpd.read_file('data/final.geojson').is_valid).sum())"` prints `0`, meaning no invalid shapes.
+- [X] In Git Bash: `curl -s -H 'Accept-Encoding: br' -o /dev/null -w '%{size_download}\n' https://hawaiizoningatlas.netlify.app/data/final.geojson` prints about 2990000 (bytes). Before this change it printed 8621444.
 
 ---
 
