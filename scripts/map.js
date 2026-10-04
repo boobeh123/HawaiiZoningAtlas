@@ -1,6 +1,13 @@
 var map // Global variable to store the Leaflet map
 var towns // GeoJSON layer for town boundaries
 var townActive // Selected town name
+let districtActive = null // Properties of the clicked district, shown in the area panel
+
+// Phones: the same breakpoint as the Media queries block in style.css
+const phoneMediaQuery = '(max-width: 600px)'
+
+// Phones and touch-only screens get no district tooltips (see syncZoneTooltips)
+const noTooltipsQuery = matchMedia(`${phoneMediaQuery}, (hover: none)`)
 
 // GeoJSON layer with district data. Don't name it `dataLayer`: Google
 // Analytics owns window.dataLayer (see scripts/analytics.js).
@@ -36,6 +43,35 @@ const createTextElement = (tagName, text = '', className = '') => {
 }
 
 /*
+ * Returns a district's yes/no flags as short labels, for its tooltip and the
+ * area panel
+ */
+const getZoneFlags = (properties) =>
+  [
+    properties['AHD'] === 'Yes' && 'Affordable Housing Only',
+    properties['EHD'] === 'Yes' && 'Elderly Housing Only',
+    properties['MUS'] === '1' && 'Requires a Minimum Home Size',
+  ].filter(Boolean)
+
+/*
+ * Shortens a district's Special Notes for its tooltip. Line breaks become
+ * spaces, and a long note is cut at the last whole word before the limit.
+ */
+const shortenNote = (note, limit = 160) => {
+  // Each run of spaces and line breaks becomes one space
+  const flat = note.replace(/\s+/g, ' ').trim()
+  if (flat.length <= limit) {
+    return { text: flat, isShortened: false }
+  }
+  const cut = flat.slice(0, limit)
+  const lastSpace = cut.lastIndexOf(' ')
+  return {
+    text: `${lastSpace > 0 ? cut.slice(0, lastSpace) : cut}…`,
+    isShortened: true,
+  }
+}
+
+/*
  * Builds a zone's hover tooltip from its GeoJSON properties
  */
 const buildZoneTooltip = (properties) => {
@@ -52,11 +88,7 @@ const buildZoneTooltip = (properties) => {
     return tooltip
   }
 
-  const notes = [
-    properties['AHD'] === 'Yes' && 'Affordable Housing Only',
-    properties['EHD'] === 'Yes' && 'Elderly Housing Only',
-    properties['MUS'] === '1' && 'Requires a Minimum Home Size',
-  ].filter(Boolean)
+  const notes = getZoneFlags(properties)
 
   tooltip.append(
     createTextElement('h6', zoneName, 't-t ttu'),
@@ -72,7 +104,51 @@ const buildZoneTooltip = (properties) => {
     )
   }
 
+  // The start of the Special Notes. The full note shows in the area panel.
+  if (properties['SN']) {
+    const preview = shortenNote(properties['SN'])
+    tooltip.append(createTextElement('strong', 'Note:'), ` ${preview.text}`)
+    if (preview.isShortened) {
+      tooltip.append(
+        document.createElement('br'),
+        createTextElement('span', 'Click the district for the full note', 'black-50')
+      )
+    }
+  }
+
   return tooltip
+}
+
+/*
+ * Gives each district a hover tooltip, except on phones and touch-only
+ * screens. There a tooltip covers much of the small map, and tapping a
+ * district shows the same details in the area panel instead.
+ */
+const syncZoneTooltips = () => {
+  zonesLayer.eachLayer((layer) => {
+    if (noTooltipsQuery.matches) {
+      layer.unbindTooltip()
+    } else if (!layer.getTooltip()) {
+      // Passing a function means it's built from plain text each time it
+      // opens, so Leaflet never parses data as HTML
+      layer.bindTooltip(() => buildZoneTooltip(layer.feature.properties), {
+        sticky: true,
+      })
+    }
+  })
+}
+
+/*
+ * Brings a newly selected county into view. Desktop fits the whole county.
+ * Phones only zoom in, never out: fitting a county on a small screen zooms
+ * far out from wherever you tapped.
+ */
+const showCounty = (bounds) => {
+  const isPhone = matchMedia(phoneMediaQuery).matches
+  if (isPhone && map.getBoundsZoom(bounds) <= map.getZoom()) {
+    return
+  }
+  map.fitBounds(bounds)
 }
 
 var style = function (filters, feature) {
@@ -144,10 +220,17 @@ var loadZones = function (geojson) {
     onEachFeature: function (feature, layer) {
       var pp = feature.properties
 
-      // On layer click, select town
+      // On click, select the district and its county, and show the district
+      // in the area panel. Clicking the selected district again clears both.
       layer.on('click', function () {
-        var townClicked = pp[zTown]
-        townActive = townClicked === townActive ? '' : townClicked
+        const previousTown = townActive
+        if (districtActive === pp) {
+          townActive = ''
+          districtActive = null
+        } else {
+          townActive = pp[zTown]
+          districtActive = pp
+        }
 
         // Select a town which contains the clicked district
         $('input[name="townActive"]').val(townActive)
@@ -159,25 +242,25 @@ var loadZones = function (geojson) {
         // Recalculate area
         calculateActiveArea()
 
-        if (townActive) {
-          // Fit town to center
+        // Only a newly selected county moves the map. Switching districts
+        // within it keeps the view, so you can read note after note.
+        if (townActive && townActive !== previousTown) {
           towns.eachLayer(function (l) {
             if (l.feature.properties.name20 === townActive) {
-              map.fitBounds(l.getBounds())
+              showCounty(l.getBounds())
               setTimeout(updateUrl, 500)
             }
           })
         } else {
-          // Deactivate
           updateUrl()
         }
       })
-
-      // Add tooltip. Passing a function means it's built from plain text
-      // each time it opens, so Leaflet never parses data as HTML.
-      layer.bindTooltip(() => buildZoneTooltip(pp), { sticky: true })
     },
   }).addTo(map)
+
+  // Hover tooltips, except on phones and touch-only screens
+  syncZoneTooltips()
+  noTooltipsQuery.addEventListener('change', syncZoneTooltips)
 
   // Show the overlays that were checked in the link. Their files download now.
   syncOverlays()
@@ -408,12 +491,39 @@ const clearFilters = () => {
 
   // Clear the county everywhere: the map, the form, and so the URL too
   townActive = ''
+  districtActive = null
   form.querySelector('input[name="townActive"]').value = ''
   drawCountyOutlines()
 
   // One change event runs the usual update: it restyles the zones, rewrites
   // the URL, hides the area panel, and hides this button
   form.dispatchEvent(new Event('change'))
+}
+
+/*
+ * Builds the area panel's block for the clicked district: its name, its
+ * flags, and its full Special Notes, all as text. On phones and touch-only
+ * screens this stands in for the tooltip.
+ */
+const buildDistrictDetails = (properties) => {
+  const details = createTextElement('div', '', 'districtDetails')
+  const zoneName = properties[zName]
+  const isZoned = zoneName && zoneName !== 'Not Zoned' && zoneName !== 'NULL'
+  details.append(
+    createTextElement('p', isZoned ? zoneName : 'Not Zoned', 'districtName')
+  )
+
+  const flags = getZoneFlags(properties)
+  if (flags.length) {
+    details.append(createTextElement('p', flags.join(' · '), 'districtFlags'))
+  }
+
+  details.append(
+    properties['SN']
+      ? createTextElement('p', properties['SN'], 'districtNote')
+      : createTextElement('p', 'No notes for this district.', 'districtNote black-50')
+  )
+  return details
 }
 
 /*
@@ -518,6 +628,11 @@ const calculateActiveArea = () => {
   // Stats exist only for the counties listed in data/demographics.js
   if (Object.hasOwn(demographics, townActive)) {
     calculator.append(buildDemographicStats(demographics[townActive]))
+  }
+
+  // The clicked district, when it's in the selected county
+  if (districtActive && districtActive[zTown] === townActive) {
+    calculator.append(buildDistrictDetails(districtActive))
   }
 
   calculator.classList.remove('dn')
@@ -1058,9 +1173,9 @@ const rememberTourSeen = () => {
  */
 var initMap = function () {
   // Zoom 9 fits the whole state on a desktop screen, but on a phone it shows
-  // only the ocean between the islands. Same 600px breakpoint as style.css.
-  // A link's own view still replaces this (see L.Hash below).
-  const startZoom = matchMedia('(max-width: 600px)').matches ? 6 : 9
+  // only the ocean between the islands. A link's own view still replaces
+  // this (see L.Hash below).
+  const startZoom = matchMedia(phoneMediaQuery).matches ? 6 : 9
 
   map = L.map('map', {
     zoomControl: false,
