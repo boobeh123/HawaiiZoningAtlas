@@ -19,10 +19,15 @@ const noTooltipsQuery = matchMedia(`${phoneMediaQuery}, (hover: none)`)
 let zonesLayer
 var overlays = {} // An object to contain overlay layer groups, eg `transit`
 
-var zone2color = {
+// Zone fills, also used for the legend's squares. The three zone types pass
+// the dataviz palette checks as drawn (90% opacity over the basemap): any
+// two stay easy to tell apart, with or without color blindness, and
+// nonresidential stays clear of the gray. Re-run those checks before changing
+// one (see CLAUDE.md).
+const zone2color = {
   R: '#BB22CA', // primarily residential, satisfied
-  M: '#714674eb', // mixed with residential, satisfied
-  N: '#714674ab', // nonresidential, satisfied
+  M: '#4a2b83', // mixed with residential, satisfied
+  N: '#aa75b6', // nonresidential, satisfied
   NS: '#d0d0d0', // not satisfied
   NZ: '#DCDCDB',
 }
