@@ -1,126 +1,75 @@
 name: Pull and Validate Spreadsheet Data
 
-env:
-  SPREADSHEET_ID: 1YGt_Y70oy6qc09ZZ7kip9DM2JGtRC2fAHxi6JXOIsSk
+# Pulls the research spreadsheet (read-only). When it has changed, this
+# rebuilds the map data, checks it, and pushes it to main, which Netlify
+# deploys. If any step fails, nothing is pushed and GitHub emails the repo
+# owner. See CLAUDE.md, Data pipeline.
 
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 10 * * *"
+    # Mondays at 10:00 UTC, which is midnight in Hawaii
+    - cron: "0 10 * * 1"
+
+permissions:
+  contents: write
+
+# Never run two syncs at once
+concurrency:
+  group: spreadsheet-sync
+  cancel-in-progress: false
+
 jobs:
-  Pull-And-Merge-Spreadsheet-Data:
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Pulling Maui
-        working-directory: ${{ runner.temp }}
-        env:
-          MAUI_SHEET_ID: "987737350"
-          MAUI_FILE_NAME: "maui.csv"
-        run: |
-          wget "${{ format('https://docs.google.com/spreadsheets/d/{0}/export?format=csv&gid={1}', '$SPREADSHEET_ID', '$MAUI_SHEET_ID') }}" -O $MAUI_FILE_NAME
-      - name: Pulling Honolulu (Oahu)
-        working-directory: ${{ runner.temp }}
-        env:
-          HONOLULU_SHEET_ID: "448730928"
-          HONOLULU_SHEET_NAME: "honolulu.csv"
-        run: |
-          wget "${{ format('https://docs.google.com/spreadsheets/d/{0}/export?format=csv&gid={1}', '$SPREADSHEET_ID', '$HONOLULU_SHEET_ID') }}" -O $HONOLULU_SHEET_NAME
-      - name: Pulling Hawaii (Big Island)
-        working-directory: ${{ runner.temp }}
-        env:
-          HAWAII_SHEET_ID: "835193382"
-          HAWAII_SHEET_NAME: "hawaii.csv"
-        run: |
-          wget "${{ format('https://docs.google.com/spreadsheets/d/{0}/export?format=csv&gid={1}', '$SPREADSHEET_ID', '$HAWAII_SHEET_ID') }}" -O $HAWAII_SHEET_NAME
-      - name: Pulling Kauai
-        working-directory: ${{ runner.temp }}
-        env:
-          KAUAI_SHEET_ID: "1081331077"
-          KAUAI_SHEET_NAME: "kauai.csv"
-        run: |
-          wget "${{ format('https://docs.google.com/spreadsheets/d/{0}/export?format=csv&gid={1}', '$SPREADSHEET_ID', '$KAUAI_SHEET_ID') }}" -O $KAUAI_SHEET_NAME
-      - name: Merge Island CSVs  
-        working-directory: ${{ runner.temp }} # insert a new line after the last comma of each csv, that way each appended CSV after #Maui will append on a new line
-        run: | # also started from 3rd line for only unique data from each file
+      - uses: actions/checkout@v7
 
-          sed 's/,$/,\n/' hawaii.csv > hawaii_insert_line.csv 
-          sed 's/,$/,\n/' honolulu.csv > honolulu_insert_line.csv 
-          sed 's/,$/,\n/' kauai.csv > kauai_insert_line.csv 
-          sed 's/,$/,\n/' maui.csv > maui_insert_line.csv 
-
-          rm hawaii.csv
-          rm honolulu.csv
-          rm kauai.csv
-          rm maui.csv
-
-          head -n 2 maui_insert_line.csv > hawaii-zoning-data.csv && tail -n+3 -q *.csv >> hawaii-zoning-data.csv 
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+      - uses: actions/setup-python@v7
         with:
-          name: hawaii-zoning-data.csv
-          path: ${{ runner.temp }}/hawaii-zoning-data.csv
-  Validate-Data:
-    needs: Pull-And-Merge-Spreadsheet-Data
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: Install csvkit
-        run: |
-          pip install csvkit
-      - name: Download Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: hawaii-zoning-data.csv
-      - name: Validate Data # Not doing any real validation, just outputting csvclean results to detect any surface problems
-        run: |
-          csvclean -n hawaii-zoning-data.csv
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            data-pipeline/requirements.txt
+            data-pipeline/csv-validation/requirements.txt
 
-  Validate-CSV:
-    needs: Validate-Data
-    runs-on: ubuntu-latest
-    steps:
-      - uses: "actions/checkout@v3"
+      - name: Pull the spreadsheet
+        working-directory: data-pipeline
+        run: python pull_sheet.py --message "$RUNNER_TEMP/commit-message.txt"
 
-      - name: Set up Python 3
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-          cache: "pip"
-      - name: Install petl
+      - name: Validate the CSV
         working-directory: data-pipeline/csv-validation
         run: |
-          pip install -r ./requirements.txt
-      - name: Run Validation
-        working-directory: data-pipeline/csv-validation
-        run: |
-          python validation.py
+          pip install -r requirements.txt
+          python validation.py ../hawaii-zoning-data.csv
 
-  Commit-Data:
-    needs: Validate-CSV
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Download Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: hawaii-zoning-data.csv
-      - name: Get current date
-        run: echo "NOW=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Move Artifact
-        run: mv hawaii-zoning-data.csv data/
-      - name: Commit to repo
+      - name: Check whether the spreadsheet changed
+        id: changes
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "there are changes to commit";
+          if git diff --quiet -- data-pipeline/hawaii-zoning-data.csv; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The spreadsheet hasn't changed, so there's nothing to push."
           else
-            exit 0;
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          git config --local user.email "github-actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add data/hawaii-zoning-data.csv
-          git commit -m "Spreadsheet data update ${{ env.NOW }}"
+      - name: Rebuild the map data
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: data-pipeline
+        run: |
+          pip install -r requirements.txt
+          jupyter execute CombineJurisdictions.ipynb
+          cp final.geojson ../data/final.geojson
+
+      - name: Check the map data
+        if: steps.changes.outputs.changed == 'true'
+        run: python data-pipeline/check_data.py
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data-pipeline/hawaii-zoning-data.csv data-pipeline/final.geojson data-pipeline/final.csv data/final.geojson
+          git commit --file "$RUNNER_TEMP/commit-message.txt"
           git push
