@@ -52,13 +52,16 @@
 	<!-- Loading and error messages for the zoning data, announced to screen readers -->
 	<p class="mapStatus" id="mapStatus" role="status">Loading zoning data…</p>
 
+	<!-- Phones: announces the overlay status while the closed drawer hides it (see syncOverlayAnnouncement) -->
+	<p class="clip" id="overlayStatusAnnounce" role="status"></p>
+
 	<div class="pa3 shadow-1 dn bg-white" id="activeAreaCalculator"></div>
 
 	<div id="sidebar" class="pa3 br1">
 		<!-- Phones only: opens and closes the sidebar as a drawer (see setDrawerOpen) -->
 		<button type="button" id="drawerToggle" aria-expanded="false" aria-controls="HiZoningAtlas">
 			<span class="material-icons" aria-hidden="true">expand_less</span>
-			<span>Filters &amp; overlays</span>
+			<span class="drawerLabel">Filters &amp; overlays</span>
 			<span id="drawerFilterCount"></span>
 		</button>
 

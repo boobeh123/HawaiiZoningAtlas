@@ -1,7 +1,7 @@
 :root {
   /* Phone drawer (see Media queries): the bar that always shows, the drawer's
-     height when open, and its lower height during the tour, which leaves the
-     tour's popovers the room they had above the old 55/45 split */
+     height when open, and its lower height during the tour, which leaves
+     room above it for the tour's popovers pinned at the top */
   --drawerBarHeight: 48px;
   --drawerOpenHeight: 70dvh;
   --drawerTourHeight: 45dvh;
@@ -280,7 +280,10 @@ Media queries
     height: var(--drawerBarHeight);
     max-height: none;
     padding: 0;
+    /* clip, unlike hidden, can't be scrolled, so a rotation or a #link can't
+       shift the bar out of place. hidden is the fallback for older Safari. */
     overflow: hidden;
+    overflow: clip;
     border-radius: 0;
     opacity: 1;
     box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
@@ -315,8 +318,10 @@ Media queries
     color: rgba(0, 0, 0, 0.8);
     font-family: 'Red Hat Display', sans-serif;
     font-size: 16px;
+    font-weight: bold;
     letter-spacing: 0.03em;
     text-align: left;
+    white-space: nowrap;
     cursor: pointer;
   }
 
@@ -324,11 +329,27 @@ Media queries
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 
+  /* On the narrowest phones the label gives way to the count */
+  .drawerLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* How many housing filters are on, at the bar's right end */
   #drawerFilterCount {
+    flex: none;
     margin-left: auto;
     color: rgba(0, 0, 0, 0.6);
     font-size: 14px;
+  }
+
+  /* Focus rings go inside the buttons, because the drawer and the area card
+     clip anything outside their edges */
+  #drawerToggle:focus-visible,
+  .areaCardToggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -4px;
   }
 
   /* The drawer's contents scroll on their own, under the bar */
@@ -380,8 +401,11 @@ Media queries
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    width: 100%;
-    padding: 0;
+    /* Reaches into the card's 1rem padding (Tachyons' pa3), so the whole top
+       of the card is a 48px touch target while the text stays put */
+    width: calc(100% + 2rem);
+    margin: -1rem -1rem -0.5rem;
+    padding: 1rem 1rem 0.5rem;
     border: 0;
     background: none;
     color: inherit;

@@ -499,11 +499,12 @@ const updateDrawerFilterCount = () => {
  * Phones: opens or closes the filters drawer. While it's closed, its
  * contents are inert, so the keyboard and screen readers skip them. Wider
  * screens always show the whole sidebar, so nothing is inert there.
- * `animate: false` skips the slide, for the tour's changes.
+ * `animate: false` skips the height transition, for the tour's changes.
  */
 const setDrawerOpen = (open, { animate = true } = {}) => {
   const sidebar = document.querySelector('#sidebar')
   const toggle = document.querySelector('#drawerToggle')
+  const isPhone = matchMedia(phoneMediaQuery).matches
   drawerOpen = open
 
   if (!animate) {
@@ -514,8 +515,14 @@ const setDrawerOpen = (open, { animate = true } = {}) => {
   toggle.querySelector('.material-icons').textContent = open
     ? 'expand_more'
     : 'expand_less'
-  document.querySelector('#HiZoningAtlas').inert =
-    matchMedia(phoneMediaQuery).matches && !open
+  document.querySelector('#HiZoningAtlas').inert = isPhone && !open
+
+  // Open, the drawer covers the map's bottom corners (the Map/Satellite
+  // switch and the credits), so keyboard focus skips them too
+  document.querySelectorAll('.leaflet-bottom').forEach((corner) => {
+    corner.inert = isPhone && open
+  })
+  syncOverlayAnnouncement()
 
   if (!animate) {
     // Reading the height applies it before the transition comes back
@@ -600,6 +607,9 @@ const buildAreaCardToggle = (satisfiesPerc) => {
   toggle.append(
     // townActive can come from the URL, so it's set as text
     createTextElement('span', `${satisfiesPerc}% of ${townActive}`),
+    // Tachyons' clip hides it on screen. Screen readers hear what the
+    // percentage means, which the collapsed card doesn't show.
+    createTextElement('span', ' satisfies your filters', 'clip'),
     icon
   )
   toggle.addEventListener('click', () => {
@@ -686,7 +696,7 @@ const calculateActiveArea = () => {
   if (totalAcres === 0) {
     calculator.replaceChildren()
     calculator.classList.add('dn')
-    // On phones, the next county starts with the short card again
+    // On phones, after the card closes, the next district starts short again
     areaCardExpanded = false
     return
   }
@@ -1153,6 +1163,19 @@ const renderOverlayStatus = () => {
   status.textContent =
     overlayError || (loading.length > 0 ? `Loading ${loading.join(', ')}…` : '')
   status.classList.toggle('statusError', Boolean(overlayError))
+  syncOverlayAnnouncement()
+}
+
+/*
+ * Phones: a closed drawer's contents are inert, which hides the status line
+ * from screen readers too. A hidden copy outside the drawer speaks for it
+ * until the drawer opens.
+ */
+const syncOverlayAnnouncement = () => {
+  const isStatusHidden = document.querySelector('#HiZoningAtlas').inert
+  document.querySelector('#overlayStatusAnnounce').textContent = isStatusHidden
+    ? document.querySelector('#overlayStatus').textContent
+    : ''
 }
 
 /*
@@ -1328,15 +1351,9 @@ var initMap = function () {
     }
   ).addTo(map)
 
-  // Phones: the filters drawer starts closed. Rotating into the tablet layout
-  // or back changes whether its contents should be inert.
-  document
-    .querySelector('#drawerToggle')
-    .addEventListener('click', () => setDrawerOpen(!drawerOpen))
+  // Phones: the filters drawer starts closed (its bar is wired up with the
+  // tour, below)
   setDrawerOpen(false, { animate: false })
-  matchMedia(phoneMediaQuery).addEventListener('change', () =>
-    setDrawerOpen(drawerOpen, { animate: false })
-  )
 
   setFilters()
 
@@ -1381,14 +1398,25 @@ var initMap = function () {
   // 	}
   // })
 
-  // Phones: Driver.js changes steps on touchstart, so the browser's click
-  // for that same tap lands on whatever the new step puts under the finger,
-  // like the drawer's bar or a district. Each step change swallows that one
-  // click. The next press of any kind disarms it, in case no click comes.
+  // On touch screens Driver.js changes steps on touchstart, so the browser's
+  // click for that same tap lands on whatever the new step puts under the
+  // finger, like the drawer's bar, a district, or a link. After a tap
+  // changes the step, that one click is swallowed. Mouse and keyboard step
+  // changes leave no click behind, and any new press disarms it.
+  let lastPressWasTouch = false
   let swallowNextClick = false
   document.addEventListener(
     'pointerdown',
+    (event) => {
+      lastPressWasTouch = event.pointerType !== 'mouse'
+      swallowNextClick = false
+    },
+    true
+  )
+  document.addEventListener(
+    'keydown',
     () => {
+      lastPressWasTouch = false
       swallowNextClick = false
     },
     true
@@ -1406,15 +1434,25 @@ var initMap = function () {
   )
 
   // Phones: the tour opens the drawer, lower than usual, for the steps
-  // inside it, and closes it for the map's own steps. Driver.js calls this
-  // before it measures the step's element.
+  // inside it, and closes it for the map's own steps. The step's element
+  // goes as low in the drawer as it fits, away from the popover pinned at
+  // the top of the screen. One taller than the drawer starts at its top.
+  // Elsewhere this just keeps the drawer's state closed.
   const showTourStep = (element) => {
-    if (!matchMedia(phoneMediaQuery).matches) return
-    swallowNextClick = true
     const sidebar = document.querySelector('#sidebar')
-    const isInDrawer = sidebar.contains(element.node)
+    const content = document.querySelector('#HiZoningAtlas')
+    const isInDrawer =
+      matchMedia(phoneMediaQuery).matches && sidebar.contains(element.node)
     sidebar.classList.toggle('drawerTour', isInDrawer)
     setDrawerOpen(isInDrawer, { animate: false })
+    if (isInDrawer && element.node !== content) {
+      const drawerBox = content.getBoundingClientRect()
+      const stepBox = element.node.getBoundingClientRect()
+      content.scrollTop +=
+        stepBox.height <= drawerBox.height
+          ? stepBox.bottom - drawerBox.bottom
+          : stepBox.top - drawerBox.top
+    }
   }
 
   // Where the filters are: a drawer on phones, a panel on the left elsewhere
@@ -1426,18 +1464,44 @@ var initMap = function () {
   var driver = new Driver({
     animate: false,
     allowClose: false,
-    onHighlightStarted: showTourStep,
+    // Phones: keep the element where showTourStep put it. Driver.js's own
+    // check can't tell it's already in view inside the drawer, and would
+    // center it, which tucks the top of a tall step under the drawer's bar.
+    scrollIntoViewOptions: matchMedia(phoneMediaQuery).matches
+      ? { behavior: 'instant', block: 'nearest' }
+      : null,
+    // Driver.js calls this before it measures the step's element
+    onHighlightStarted: (element) => {
+      swallowNextClick = lastPressWasTouch
+      showTourStep(element)
+    },
     // Driver.js calls this when the tour is closed or finished
     onReset: () => {
       rememberTourSeen()
-      // Phones: the map gets the screen back, and the tap on Close or Done
-      // can't select the district that's now under it
-      if (matchMedia(phoneMediaQuery).matches) {
-        swallowNextClick = true
-        document.querySelector('#sidebar').classList.remove('drawerTour')
-        setDrawerOpen(false, { animate: false })
-      }
+      swallowNextClick = lastPressWasTouch
+      // Phones: the map gets the screen back
+      document.querySelector('#sidebar').classList.remove('drawerTour')
+      setDrawerOpen(false, { animate: false })
     },
+  })
+
+  // Phones: the drawer's bar. It does nothing while the tour runs, because
+  // the tour opens and closes the drawer itself.
+  document.querySelector('#drawerToggle').addEventListener('click', () => {
+    if (!driver.isActivated) {
+      setDrawerOpen(!drawerOpen)
+    }
+  })
+
+  // Rotating into the tablet layout or back changes whether the drawer's
+  // contents should be inert, and where a running tour's step should be
+  matchMedia(phoneMediaQuery).addEventListener('change', () => {
+    if (driver.isActivated && driver.hasHighlightedElement()) {
+      showTourStep(driver.getHighlightedElement())
+      driver.refresh()
+    } else {
+      setDrawerOpen(drawerOpen, { animate: false })
+    }
   })
   // Define the steps for introduction
   driver.defineSteps([
