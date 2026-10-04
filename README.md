@@ -156,7 +156,7 @@ Our research team read the complete zoning codes of all four counties and record
 ### Features
 * Static webpage deployed on Netlify
 * Responsive to mobile viewports: on phones, the map fills the screen, the filters slide up in a drawer, and a tapped district shows a short card that expands to the full details
-* Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential
+* Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential. The colors stay distinct for colorblind visitors too
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
 * County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
 * A Clear filters button that resets the housing filters and the selected county, and leaves your overlays on
@@ -263,6 +263,8 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Phones:** no tooltips covering the small map, and tapping a district never zooms out
 - **Smaller map data:** the zoning file is half its old size (25.4 → 12.6 MB, or 8.6 → about 3.0 MB as sent), so the map loads in 3.6 s instead of 8.5 s on a 10 Mbps connection. The county outlines and the rail line shrank too, and the map looks the same
 - **Phone drawer:** the map now fills a phone's screen. The filters open in a drawer from a bar along the bottom, and a tapped district shows a short card instead of a panel covering much of the map. The intro tour opens and closes the drawer as it goes
+- **Zone colors:** mixed-with-residential districts are now a deep purple, and nonresidential ones a soft orchid. They used to be the same muted purple at two strengths, which was hard to tell apart. All three zone colors now pass a palette check that includes colorblind vision, and the primarily residential magenta is unchanged
+- **Custom properties:** `style.css` keeps its colors, fonts, font sizes, and spacing in one set of CSS variables
 
 #### Up next
 
