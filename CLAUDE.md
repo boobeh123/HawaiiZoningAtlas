@@ -48,7 +48,7 @@ Don't use the `data-pipeline/Dockerfile`. Its `CMD` runs `hzadata.py`, which doe
 
 ## Deployment
 
-The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (~25 MB) and every overlay GeoJSON, so keep committed GeoJSON simplified and minified.
+The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (12.6 MB, about 3.2 MB as Netlify's Brotli sends it) and `counties.geojson`, plus each overlay's file the first time its box is checked. House and Senate are checked by default. Keep committed GeoJSON simplified and minified. `data-pipeline/shrink_geojson.py` rounds coordinates to 5 decimal places and drops the spaces.
 
 **Keys.** Anything the browser loads is public, so only public keys belong in site code.
 - **CARTO basemap keys:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs. There are two keys. On `localhost` and `127.0.0.1` the map uses the localhost key, and everywhere else it uses the production key.
@@ -139,12 +139,13 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 6. **Output.**
    - **Shortened names and values:** `cols_xwalk` renames the columns and `vals_xwalk` shortens the values (`Allowed/Conditional`→`A`, `Public Hearing`→`AH`, `Primarily Residential`→`R`, …). Any `cols_xwalk` column the CSV lacks is silently dropped, which is how the ADU filters once broke.
    - **Flag formats:** the save cell writes the true/false flags as the text the checkboxes send. The minimum unit size flags (`1MUS`…`4MUS`, `MUS`) become `'1'`/`'0'`, and `ASize` becomes `'Yes'`/`'No'`. Without that, pyogrio writes `'True'`/`'False'`, which breaks those filters and the tooltip's minimum-size line.
+   - **Smaller file:** the save cell snaps every point to a 0.00001° grid (about 1 m) with `set_precision`. Then `shrink_geojson.py` writes the file with 5 decimal places and no spaces, which halves it. Plain rounding would leave some districts invalid (crossing edges, collapsed slivers): Leaflet still draws them, but GIS tools reject them. The notebook imports the script from `HOME_DIRECTORY`, so it has to stay in `data-pipeline/`.
    - **Two copies:** the notebook writes `data-pipeline/final.geojson`, but the site reads `data/final.geojson`, so copy the file across by hand. The two should be identical. The action doesn't commit anything.
    - **CSV location:** `final.csv` is written to the working directory, not `HOME_DIRECTORY`.
 
 ## Inspecting data
 
-`data/final.geojson` (~25 MB), `data/hydro.min.geojson` (~11 MB), and `data-pipeline/federal-state-dissolve.geojson` (~34 MB) are too large to Read, so query them with a script. The data contains ʻokina (U+02BB), so use `python -X utf8` on Windows:
+`data/final.geojson` (~12.6 MB, all on one line), `data/hydro.min.geojson` (~11 MB), and `data-pipeline/federal-state-dissolve.geojson` (~34 MB) are too large to Read, so query them with a script. The data contains ʻokina (U+02BB), so use `python -X utf8` on Windows:
 
 ```sh
 python -X utf8 -c "import json,collections; d=json.load(open('data/final.geojson',encoding='utf-8')); print(collections.Counter(k for f in d['features'] for k in f['properties']))"
