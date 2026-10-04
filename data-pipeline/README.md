@@ -29,7 +29,7 @@ Run these from this folder, `data-pipeline/`.
    cd csv-validation && ~/hza/Scripts/python validation.py ../hawaii-zoning-data.csv && cd ..
    ```
 
-3. **Rebuild the map data** with the notebook, which takes about a minute. Then copy the result to the site:
+3. **Rebuild the map data** with the notebook, which takes about a minute. It snaps the shapes to a 1 m grid, and `shrink_geojson.py`, which must stay in this folder, writes `final.geojson` at half the size it used to be. Then copy the result to the site:
 
    ```sh
    ~/hza/Scripts/jupyter execute CombineJurisdictions.ipynb
@@ -41,5 +41,7 @@ Run these from this folder, `data-pipeline/`.
    ```sh
    ~/hza/Scripts/python check_data.py
    ```
+
+To shrink another GeoJSON file the same way, run `~/hza/Scripts/python shrink_geojson.py ../data/<name>.geojson`. For polygon files, read the note at the top of `shrink_geojson.py` first.
 
 The `Dockerfile` in this folder is from an earlier setup and doesn't work. Its command runs `hzadata.py`, which doesn't exist.
