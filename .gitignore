@@ -6,6 +6,10 @@
 /out-tsc
 /data-pipeline/district-shapes/*
 
+# Python caches, written by the notebook and by validation.py
+__pycache__/
+*.pyc
+
 # Runtime data
 pids
 *.pid
