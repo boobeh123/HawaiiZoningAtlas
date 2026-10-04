@@ -64,6 +64,9 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - It also holds vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize, which nothing calls anymore.
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
+- **Custom properties.** `style.css` defines its colors, fonts, font sizes, and spacing on `:root`, for example `--colorText`, `--fontHeading`, `--fontSizeBase`, `--spaceMd`, and `--edgeGap`. Use them instead of raw values.
+  - **`em` sizes:** they stay relative on purpose.
+  - **Tachyons:** its classes in `index.html` still set most text colors and sizes.
 - **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
   - **Phones (600px and narrower):** the map fills the screen above a 48px bar (`--phoneMapHeight`), and `#sidebar` is a drawer along the bottom.
     - **Same breakpoint in JS:** `phoneMediaQuery` in `map.js`. `initMap()` uses it to start phones at zoom 6.
@@ -112,6 +115,9 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `T`: county.
   - `Z`: full district name.
   - `Ty`: zone type `R`/`M`/`N` (null means not zoned), mapped to colors by `zone2color`.
+    - **Shared:** `zone2color` fills both the zones and the legend's squares.
+    - **Checked:** the three zone colors pass the dataviz skill's palette validator as drawn: blended at the default 90% opacity over the basemap (`#fafaf8`), with every pair checked. Re-run it before changing one.
+    - **Overlays:** their colors don't pass yet (see Verify.md).
   - `MA`: municipal acres, i.e. zone area minus federal/state land. Feeds the area calculator.
   - `TN`: tooltip note. It's empty everywhere. `AHD`, `EHD`, and `MUS` are tooltip flags (`getZoneFlags()`).
   - `SN`: the spreadsheet's Special Notes, as free text, so render it only as text. The tooltip shows `shortenNote()`'s ~160-character preview, and the area panel shows the full note.
