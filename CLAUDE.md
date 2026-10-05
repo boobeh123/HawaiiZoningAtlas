@@ -60,6 +60,8 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 
 - **Two pages.**
   - **Home (`index.html`, at `/`):** what the atlas shows, how to read the map, and "Try it" links that open the map already set up. It uses links in the shared-link format.
+    - **County table:** `scripts/countyStats.js` (deferred) builds "The four counties at a glance" from `data/demographics.js`, the same file as the map's area panel. Rerunning `tools/fetchDemographics.js` updates both.
+    - **County names:** the data's keys have no ʻokina, so the script maps them to display names.
     - **Plain:** semantic HTML and `style.css` only, with no Tachyons, jQuery, Leaflet, or map data.
   - **The map (`map/index.html`, at `/map/`):** everything below is about this page.
   - **Root-relative paths:** both pages load assets from the site's root (`/style.css`, `/data/…`, `/scripts/…`). So the site has to be served from a domain root, as Netlify and `python -m http.server` both do.
