@@ -1598,6 +1598,13 @@ var initMap = async function () {
     true
   )
 
+  // Phones: the tour step that's been cut to the drawer's height, if any
+  let clampedTourStep = null
+  const unclampTourStep = () => {
+    clampedTourStep?.classList.remove('tourStepClamp')
+    clampedTourStep = null
+  }
+
   // Phones: the tour opens the drawer, lower than usual, for the steps
   // inside it, and closes it for the map's own steps. The step's element
   // goes as low in the drawer as it fits, away from the popover pinned at
@@ -1608,13 +1615,21 @@ var initMap = async function () {
     const content = document.querySelector('#HiZoningAtlas')
     const isInDrawer =
       matchMedia(phoneMediaQuery).matches && sidebar.contains(element.node)
+    unclampTourStep()
     sidebar.classList.toggle('drawerTour', isInDrawer)
     setDrawerOpen(isInDrawer, { animate: false })
     if (isInDrawer && element.node === content) {
       content.scrollTop = 0
     } else if (isInDrawer) {
       const drawerBox = content.getBoundingClientRect()
-      const stepBox = element.node.getBoundingClientRect()
+      let stepBox = element.node.getBoundingClientRect()
+      // A step taller than the drawer is cut to its height, so the
+      // highlight ends at the drawer's edge instead of running past it
+      if (stepBox.height > drawerBox.height) {
+        element.node.classList.add('tourStepClamp')
+        clampedTourStep = element.node
+        stepBox = element.node.getBoundingClientRect()
+      }
       content.scrollTop +=
         stepBox.height <= drawerBox.height
           ? stepBox.bottom - drawerBox.bottom
@@ -1669,6 +1684,9 @@ var initMap = async function () {
   var driver = new Driver({
     animate: false,
     allowClose: false,
+    // Phones: the highlight hugs the element. Driver.js's default 10px of
+    // room around it would poke out of the drawer and past the screen's sides.
+    padding: matchMedia(phoneMediaQuery).matches ? 0 : 10,
     // Phones: keep the element where showTourStep put it. Driver.js's own
     // check can't tell it's already in view inside the drawer, and would
     // center it, which tucks the top of a tall step under the drawer's bar.
@@ -1686,6 +1704,7 @@ var initMap = async function () {
       swallowNextClick = lastPressWasTouch
       // Phones: the map gets the screen back, and the drawer will next open
       // at its top
+      unclampTourStep()
       document.querySelector('#sidebar').classList.remove('drawerTour')
       setDrawerOpen(false, { animate: false })
       document.querySelector('#HiZoningAtlas').scrollTop = 0
