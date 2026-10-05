@@ -819,6 +819,37 @@ const buildDemographicStats = (townDemographics) => {
  * and updates the message in the sidebar. Everything is set as text,
  * because `townActive` can come from the URL.
  */
+/*
+ * Closes the area panel by deselecting the district and its county, as
+ * clicking the selected district again does. The filters stay as they are.
+ */
+const closeAreaPanel = () => {
+  townActive = ''
+  districtActive = null
+  document.querySelector('#form input[name="townActive"]').value = ''
+  drawCountyOutlines()
+  updateResetButton()
+  calculateActiveArea()
+  updateUrl()
+}
+
+/*
+ * The ✕ in the area panel's top corner (see closeAreaPanel)
+ */
+const buildAreaCloseButton = () => {
+  // The icon font draws the word "close" as ✕
+  const button = createTextElement(
+    'button',
+    'close',
+    'areaCloseButton material-icons'
+  )
+  button.type = 'button'
+  button.title = 'Close'
+  button.setAttribute('aria-label', 'Close the county panel')
+  button.addEventListener('click', closeAreaPanel)
+  return button
+}
+
 const calculateActiveArea = () => {
   const calculator = document.querySelector('#activeAreaCalculator')
   const filters = getFilters()
@@ -868,7 +899,11 @@ const calculateActiveArea = () => {
     ` (${Math.trunc(totalAcres).toLocaleString()} acres) satisfies your filtering criteria.`
   )
   // The header only shows on phones
-  calculator.replaceChildren(buildAreaCardToggle(satisfiesPerc), summary)
+  calculator.replaceChildren(
+    buildAreaCloseButton(),
+    buildAreaCardToggle(satisfiesPerc),
+    summary
+  )
 
   // Stats exist only for the counties listed in data/demographics.js
   if (Object.hasOwn(demographics, townActive)) {
