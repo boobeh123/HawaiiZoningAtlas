@@ -233,35 +233,35 @@ Districts that allow every type you turn on stay colored.
   - **Rerun:** the coloring and link comparison, with the same result.
 
 **Your checks.** Run the site locally from the branch: `git fetch origin`, `git checkout claude/filter-refactor`, `python -m http.server 8000`, and open http://localhost:8000/map/.
-- [ ] **Do:** look at the sidebar. **You'll see:**
+- [X] **Do:** look at the sidebar. **You'll see:**
   - "Housing types", with five plain checkboxes.
   - Overlays with the new names.
   - A "Zone opacity" label over the slider.
   - **It means:** the sidebar is built from the new config and markup.
-- [ ] **Do:** turn on **1-family homes**. **You'll see:**
+- [X] **Do:** turn on **1-family homes**. **You'll see:**
   - "How it's allowed" and "Lot size needed" open, with "Either way" and "Any size" chosen.
   - The map grays out districts that don't allow 1-family homes, the same ones as on the live site.
   - **It means:** the new controls filter exactly as the old pre-checked boxes did.
-- [ ] **Do:** choose **Under ½ acre**. **You'll see:** more districts turn gray, and the address bar's link ends in `1MLS=A&1MLS=B&…`. **It means:** lot sizes are now ceilings that write the same link pairs as before.
-- [ ] **Do:** turn on **Accessory dwelling units (ADUs)**. **You'll see:**
+- [X] **Do:** choose **Under ½ acre**. **You'll see:** more districts turn gray, and the address bar's link ends in `1MLS=A&1MLS=B&…`. **It means:** lot sizes are now ceilings that write the same link pairs as before.
+- [X] **Do:** turn on **Accessory dwelling units (ADUs)**. **You'll see:**
   - Its hint, and five rules worded positively, like "can be rented out", plus the note about blank answers.
   - No "How it's allowed" group.
   - **It means:** options that can't change today's map are hidden. No ADU district needs a hearing.
-- [ ] **Do:** open http://localhost:8000/map/#12/21.33752/-157.86051/1F=&1F=A&1F=AH&1MLS=A&1MLS=B&townActive=Honolulu&Overlay=transit&opacity=90 in a new tab. **You'll see:**
+- [X] **Do:** open http://localhost:8000/map/#12/21.33752/-157.86051/1F=&1F=A&1F=AH&1MLS=A&1MLS=B&townActive=Honolulu&Overlay=transit&opacity=90 in a new tab. **You'll see:**
   - 1-family homes on, with "Under ½ acre" chosen.
   - Honolulu selected, and the rail stations showing.
   - **It means:** links shared before this change still open the same filters.
-- [ ] **Do:** click **✕ Clear**. **You'll see:** every housing type turns off and Honolulu is no longer selected. The overlays stay exactly as they were. After the link above, that's Rail stations on, and House and Senate off, because a link sets every box. **It means:** Clear filters still works with the new controls, and still leaves the overlays alone.
+- [X] **Do:** click **✕ Clear**. **You'll see:** every housing type turns off and Honolulu is no longer selected. The overlays stay exactly as they were. After the link above, that's Rail stations on, and House and Senate off, because a link sets every box. **It means:** Clear filters still works with the new controls, and still leaves the overlays alone.
   - Bobby (2026-10-05): first saw Rail on and House/Senate off, and asked whether that was intended. It is: this check's old wording ("House and Senate stay on") assumed a fresh page.
-- [ ] **Do:** press Tab from the top of the sidebar, then use the arrow keys inside "How it's allowed". **You'll see:** a ring on each control, and the arrows switch the choice. **It means:** the filters work from the keyboard.
-- [ ] **Do:** use the device toolbar (Ctrl+Shift+M) with iPhone SE, open the drawer, and turn on a type. **You'll see:** roomy rows, and "1 filter on" on the bar. **It means:** the phone drawer holds the new controls with full-size touch targets.
-- [ ] **Do:** run `localStorage.removeItem('hzaTourSeen')` and reload. **You'll see:** the third step is "Choose Housing Types", pointing at the new section. **It means:** the tour matches the new controls.
-- [ ] **Do:** with the device toolbar on iPhone SE, run the tour again and step through it. **You'll see:**
+- [X] **Do:** press Tab from the top of the sidebar, then use the arrow keys inside "How it's allowed". **You'll see:** a ring on each control, and the arrows switch the choice. **It means:** the filters work from the keyboard.
+- [X] **Do:** use the device toolbar (Ctrl+Shift+M) with iPhone SE, open the drawer, and turn on a type. **You'll see:** roomy rows, and "1 filter on" on the bar. **It means:** the phone drawer holds the new controls with full-size touch targets.
+- [X] **Do:** run `localStorage.removeItem('hzaTourSeen')` and reload. **You'll see:** the third step is "Choose Housing Types", pointing at the new section. **It means:** the tour matches the new controls.
+- [X] **Do:** with the device toolbar on iPhone SE, run the tour again and step through it. **You'll see:**
   - Each highlight sits inside the drawer with a teal ring, and nothing pokes out below it over the tab bar.
   - Every popover stays above the drawer, and its Close, Previous, and Next buttons always show, even when the text scrolls.
   - **It means:** the tour's highlight and popovers fit the phone layout (fixed 2026-10-05, after your report).
-- [ ] **Do:** in Git Bash from `data-pipeline/`, run `~/hza/Scripts/python check_data.py`. **You'll see:** "All checks passed". **It means:** every option in the config matches real data.
-- [ ] **Do:** read the labels and hints, and edit `data/filters.json` if you'd like different wording (decision 4). **You'll see:** your edits take effect on reload, with no HTML changes. **It means:** wording changes are now one-file edits.
+- [X] **Do:** in Git Bash from `data-pipeline/`, run `~/hza/Scripts/python check_data.py`. **You'll see:** "All checks passed". **It means:** every option in the config matches real data.
+- [X] **Do:** read the labels and hints, and edit `data/filters.json` if you'd like different wording (decision 4). **You'll see:** your edits take effect on reload, with no HTML changes. **It means:** wording changes are now one-file edits.
 
 ---
 
