@@ -113,6 +113,8 @@ h2 {
   background-color: var(--colorSurface);
   top: calc(var(--mapTop) + var(--edgeGap));
   left: var(--edgeGap);
+  padding: var(--spaceMd);
+  border-radius: 2px;
   opacity: 0.95;
 }
 
@@ -138,15 +140,6 @@ label {
 
 label:hover {
   opacity: 0.8;
-}
-
-.subgroup {
-  margin-bottom: 10px;
-}
-
-.main-in-group:checked ~ span {
-  font-weight: bold;
-  color: var(--colorText);
 }
 
 hr {
@@ -239,13 +232,8 @@ hr {
   border-radius: 2px;
 }
 
-#resetFilters {
-  cursor: pointer;
-  font-size: var(--fontSizeLg);
-}
-
-/* Google's .material-icons rule sets display: inline-block, which would beat
-   the hidden attribute (see updateResetButton) */
+/* .clearButton's display: inline-flex would beat the hidden attribute (see
+   updateResetButton) */
 #resetFilters[hidden] {
   display: none;
 }
@@ -324,6 +312,208 @@ hr {
 .sidebarLogo {
   width: auto;
   height: 45px;
+}
+
+/**************************************************************
+Utilities
+***************************************************************/
+
+/* Hidden on screen, but still read by screen readers */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/**************************************************************
+Map sidebar
+***************************************************************/
+
+.sidebarIntro {
+  margin: var(--spaceSm) 0;
+  font-size: var(--fontSizeBase);
+}
+
+.sidebarHelp {
+  margin: var(--spaceSm) 0;
+  font-size: var(--fontSizeSm);
+}
+
+#form {
+  font-size: var(--fontSizeSm);
+  line-height: 1.25;
+}
+
+/* The section headings, the Overlays legend, and the opacity label. The
+   muted color passes AA, which the old 40% black didn't. */
+.sidebarHeading {
+  display: block;
+  margin: var(--spaceMd) 0 var(--spaceXs);
+  padding: 0;
+  color: var(--colorTextMuted);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeBase);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+/* The zone-type key */
+.legendList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendNote {
+  color: var(--colorTextMuted);
+  font-style: italic;
+}
+
+/* "Housing types" with the Clear button beside it */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+  margin: var(--spaceMd) 0 var(--spaceXs);
+}
+
+.sectionHeader .sidebarHeading {
+  margin: 0;
+}
+
+.clearButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--spaceSm) 2px var(--spaceXs);
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--colorBorder);
+  color: var(--colorText);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Two classes, to beat the 24px in Google's .material-icons rule */
+.clearButton .material-icons {
+  font-size: var(--fontSizeBase);
+}
+
+/* The housing types (built by buildFilterControls in map.js) */
+.housingTypeList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.housingType {
+  padding: var(--spaceXs) 0;
+  border-bottom: 1px solid var(--colorBorder);
+}
+
+/* A type's on/off checkbox. A type that's on is bold. */
+.typeToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  font-size: var(--fontSizeBase);
+}
+
+.typeToggle:has(input:checked) {
+  color: var(--colorText);
+  font-weight: bold;
+}
+
+/* A type's options, indented under it */
+.typeOptions {
+  margin: var(--spaceXs) 0 var(--spaceXs) var(--spaceMd);
+}
+
+/* The radio buttons and checkboxes under a type, and the overlays */
+.filterOption {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  padding: 2px 0;
+}
+
+/* display: flex above would beat the hidden attribute (see
+   hideNoEffectOptions in map.js) */
+.filterOption[hidden] {
+  display: none;
+}
+
+.typeToggle input,
+.filterOption input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+/* Fieldsets without the browser's border and padding */
+.filterGroup,
+.overlayGroup {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filterGroup + .filterGroup {
+  margin-top: var(--spaceSm);
+}
+
+.filterGroup legend {
+  margin-bottom: 2px;
+  padding: 0;
+  color: var(--colorText);
+  font-weight: bold;
+}
+
+.overlayGroup {
+  margin-top: var(--spaceMd);
+}
+
+.overlayGroup > .sidebarHeading {
+  margin-top: 0;
+}
+
+/* A sentence that explains a type or a group */
+.filterHint {
+  margin: 2px 0 0;
+  color: var(--colorTextMuted);
+  font-size: var(--fontSizeXs);
+}
+
+/* Under a type's name, lined up with its text */
+.housingType > .filterHint {
+  margin-left: calc(16px + var(--spaceXs));
+}
+
+.sidebarCredits {
+  margin: var(--spaceSm) 0 0;
+  color: var(--colorTextMuted);
+  font-size: var(--fontSizeSm);
+}
+
+.sidebarCredits a {
+  color: var(--colorText);
+}
+
+.typeToggle input:focus-visible,
+.filterOption input:focus-visible,
+.clearButton:focus-visible,
+#opacity:focus-visible {
+  outline: 2px solid var(--colorBrand);
+  outline-offset: 2px;
 }
 
 /**************************************************************
@@ -793,6 +983,13 @@ Media queries
     min-height: 0;
     overflow-y: auto;
     padding: var(--spaceMd);
+  }
+
+  /* Full-size touch targets for the filters, the overlays, and Clear */
+  .typeToggle,
+  .filterOption,
+  .clearButton {
+    min-height: 44px;
   }
 
   /* Across the top of the map, clear of the zoom buttons */
