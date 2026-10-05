@@ -16,6 +16,16 @@
   /* The House and Senate lines' colors (see map.js), for their labels */
   --colorHouse: #e06aaa;
   --colorSenate: #f8f807;
+  /* The logo's darker teal, deepened to 5:1 against white, so text in it and
+     white text on it both pass */
+  --colorBrand: #38768f;
+  --colorBrandDark: #2e667c;
+  /* The zone colors, for the key on the Home page. They match zone2color in
+     map.js, which colors the map and its legend. */
+  --colorZoneResidential: #bb22ca;
+  --colorZoneMixed: #4a2b83;
+  --colorZoneNonresidential: #aa75b6;
+  --colorZoneNotSatisfying: #d0d0d0;
 
   --fontBody: 'Zodiak', serif;
   --fontHeading: 'Red Hat Display', sans-serif;
@@ -27,10 +37,14 @@
   --fontSizeSm: 14px;
   --fontSizeBase: 16px;
   --fontSizeLg: 20px;
+  --fontSizeXl: 24px;
+  --fontSize2xl: 32px;
 
   --spaceXs: 6px;
   --spaceSm: 0.5rem;
   --spaceMd: 1rem;
+  --spaceLg: 1.5rem;
+  --spaceXl: 2.5rem;
 
   /* Wider screens: the floating boxes' distance from the screen's edges, the
      sidebar's width, and the area panel's width */
@@ -38,15 +52,27 @@
   --sidebarWidth: 380px;
   --areaPanelWidth: 340px;
 
-  /* Phone drawer (see Media queries): the bar that always shows, the drawer's
-     height when open, and its lower height during the tour, which leaves
-     room above it for the tour's popovers pinned at the top */
+  /* The navbar (see Tab bar): the top bar on wider screens, and on phones the
+     bottom tab bar plus the home indicator's safe area under it */
+  --topBarHeight: 3.5rem;
+  --tabBarHeight: 3.75rem;
+  --tabBarSpace: calc(var(--tabBarHeight) + env(safe-area-inset-bottom));
+  /* Where the map starts: under the top bar, or at the very top on phones */
+  --mapTop: var(--topBarHeight);
+
+  /* Phone drawer (see Media queries): the bar that always shows, and the
+     share of the screen above the tab bar that the drawer takes when open.
+     During the tour it opens lower, which leaves room above it for the tour's
+     popovers pinned at the top. map.js reads --drawerOpenShare to pan the map. */
   --drawerBarHeight: 48px;
-  --drawerOpenHeight: 70dvh;
-  --drawerTourHeight: 45dvh;
+  --drawerOpenShare: 0.7;
+  --drawerTourShare: 0.45;
+  --drawerOpenHeight: calc(var(--drawerOpenShare) * (100dvh - var(--tabBarSpace)));
+  --drawerTourHeight: calc(var(--drawerTourShare) * (100dvh - var(--tabBarSpace)));
   /* Phone layout (see Media queries): the map fills the screen above the
-     drawer's bar, and floating boxes keep this gap from the screen edge */
-  --phoneMapHeight: calc(100dvh - var(--drawerBarHeight));
+     drawer's bar and the tab bar, and floating boxes keep this gap from the
+     screen edge */
+  --phoneMapHeight: calc(100dvh - var(--drawerBarHeight) - var(--tabBarSpace));
   --phoneGap: 8px;
   /* Leaflet's zoom buttons plus a gap, so boxes along the top stop short of them */
   --zoomButtonsClearance: 54px;
@@ -72,14 +98,20 @@ h2 {
   letter-spacing: 0.03em;
 }
 
+/* The map fills the screen under the top bar. The ID beats the vh-100 class
+   in the markup. */
+#map {
+  height: calc(100vh - var(--mapTop));
+}
+
 #sidebar {
   z-index: 999 !important;
   position: absolute;
   width: var(--sidebarWidth);
-  max-height: calc(100vh - 2 * var(--edgeGap));
+  max-height: calc(100vh - var(--mapTop) - 2 * var(--edgeGap));
   overflow-y: scroll;
   background-color: var(--colorSurface);
-  top: var(--edgeGap);
+  top: calc(var(--mapTop) + var(--edgeGap));
   left: var(--edgeGap);
   opacity: 0.95;
 }
@@ -124,7 +156,7 @@ hr {
 
 #activeAreaCalculator {
   position: absolute;
-  top: var(--edgeGap);
+  top: calc(var(--mapTop) + var(--edgeGap));
   width: var(--areaPanelWidth);
   margin-left: calc(var(--areaPanelWidth) / -2);
   left: 50%;
@@ -172,7 +204,7 @@ hr {
 /* Loading and error message at the top of the map */
 .mapStatus {
   position: absolute;
-  top: var(--edgeGap);
+  top: calc(var(--mapTop) + var(--edgeGap));
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
@@ -289,20 +321,336 @@ hr {
   border-bottom: 1px dotted var(--colorRule);
 }
 
+.sidebarLogo {
+  width: auto;
+  height: 45px;
+}
+
+/**************************************************************
+Tab bar
+***************************************************************/
+/* Home · Map. It's the top bar on wider screens. On phones it moves to the
+   bottom, within thumb reach (see Media queries). */
+.tabBar {
+  position: relative;
+  z-index: 1100; /* Above Leaflet's controls (1000) and the phone drawer (1001) */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceMd);
+  box-sizing: border-box;
+  height: var(--topBarHeight);
+  padding: 0 var(--spaceMd);
+  border-bottom: 1px solid var(--colorBorder);
+  background-color: var(--colorSurface);
+}
+
+.tabBarBrand,
+.siteBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: 44px;
+  color: var(--colorText);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeLg);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.tabBarLogo,
+.siteLogo {
+  width: auto;
+  height: 2.25rem;
+}
+
+.tabList {
+  display: flex;
+  gap: var(--spaceSm);
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tabLink {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--spaceMd);
+  border-bottom: 3px solid transparent;
+  color: var(--colorTextMuted);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeBase);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+/* The current tab gets a bar as well as color, so it doesn't rely on color alone */
+.tabLink[aria-current='page'] {
+  border-bottom-color: var(--colorBrand);
+  color: var(--colorBrand);
+}
+
+.tabLink:focus-visible,
+.tabBarBrand:focus-visible,
+.siteBrand:focus-visible {
+  outline: 2px solid var(--colorBrand);
+  outline-offset: -4px;
+}
+
+.tabIcon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/**************************************************************
+Home
+***************************************************************/
+/* Phones only: the brand at the top of Home (see Media queries). Wider
+   screens show it in the top bar. */
+.siteHeader {
+  display: none;
+}
+
+.homePage {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: var(--spaceXl) var(--spaceMd) var(--spaceLg);
+  color: var(--colorText);
+  line-height: 1.6;
+}
+
+.homeTitle {
+  margin: 0 0 var(--spaceMd);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSize2xl);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.homeLead {
+  margin: 0 0 var(--spaceLg);
+  font-size: var(--fontSizeLg);
+}
+
+/* Open the map: white on the brand teal, 5:1 */
+.buttonLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--spaceLg);
+  border-radius: 6px;
+  background-color: var(--colorBrand);
+  color: var(--colorSurface);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeBase);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.buttonLink:focus-visible {
+  outline: 3px solid var(--colorBrand);
+  outline-offset: 3px;
+}
+
+.homeSection {
+  margin-top: var(--spaceXl);
+}
+
+.homeSection h2 {
+  margin: 0 0 var(--spaceSm);
+  font-size: var(--fontSizeXl);
+}
+
+.homePage a:not(.buttonLink),
+.homeFooter a {
+  color: var(--colorBrand);
+}
+
+/* The zone colors, as on the map's legend */
+.zoneKey {
+  margin: 0 0 var(--spaceMd);
+  padding: 0;
+  list-style: none;
+}
+
+.zoneKey li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spaceSm);
+  margin-bottom: var(--spaceXs);
+}
+
+.zoneSwatch {
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border-radius: 2px;
+  vertical-align: -0.125em;
+}
+
+/* The gray swatch sits inside a sentence */
+p .zoneSwatch {
+  margin-right: 0.25em;
+}
+
+.zoneSwatchResidential {
+  background-color: var(--colorZoneResidential);
+}
+
+.zoneSwatchMixed {
+  background-color: var(--colorZoneMixed);
+}
+
+.zoneSwatchNonresidential {
+  background-color: var(--colorZoneNonresidential);
+}
+
+.zoneSwatchNotSatisfying {
+  background-color: var(--colorZoneNotSatisfying);
+}
+
+/* "Try it" cards, each a link that opens the map already set up */
+.tryList {
+  display: grid;
+  gap: var(--spaceMd);
+  margin: var(--spaceMd) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tryCard {
+  padding: var(--spaceMd);
+  border: 1px solid var(--colorBorder);
+  border-radius: 8px;
+}
+
+.tryCard h3 {
+  margin: 0 0 var(--spaceXs);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeBase);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.tryCard p {
+  margin: 0 0 var(--spaceSm);
+}
+
+/* A full-size touch target, though it reads as a text link */
+.tryLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  min-height: 44px;
+  font-family: var(--fontHeading);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+.homeFooter {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: var(--spaceLg) var(--spaceMd);
+  border-top: 1px solid var(--colorBorder);
+  color: var(--colorTextMuted);
+  font-size: var(--fontSizeSm);
+  line-height: 1.6;
+}
+
+.homeFooter p {
+  margin: 0;
+}
+
 /**************************************************************
 Media queries
 ***************************************************************/
 
-/* Phones: the map fills the screen above a drawer that holds the sidebar.
-   initMap() uses the same 600px breakpoint to start phones zoomed out. */
+/* Phones: the map fills the screen above a drawer that holds the sidebar,
+   and the tab bar sits along the bottom. initMap() uses the same 600px
+   breakpoint to start phones zoomed out. */
 @media screen and (max-width: 600px) {
+  /* No top bar on phones, so the map starts at the very top */
+  :root {
+    --mapTop: 0px;
+  }
+
+  /* The tab bar moves to the bottom. Its height includes its top border and
+     the home indicator's safe area, so it's exactly --tabBarSpace. */
+  .tabBar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: var(--tabBarSpace);
+    padding: 0 0 env(safe-area-inset-bottom);
+    border-top: 1px solid var(--colorBorder);
+    border-bottom: 0;
+  }
+
+  .tabBarBrand {
+    display: none;
+  }
+
+  .tabList {
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    gap: 0;
+    width: 100%;
+  }
+
+  .tabLink {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spaceXs);
+    padding: 0;
+    border-top: 3px solid transparent;
+    border-bottom: 0;
+    font-size: var(--fontSizeSm);
+    line-height: 1;
+  }
+
+  .tabLink[aria-current='page'] {
+    border-top-color: var(--colorBrand);
+  }
+
+  .tabIcon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  /* Home: the brand at the top, and room at the bottom for the tab bar */
+  .siteHeader {
+    display: flex;
+    align-items: center;
+    padding: calc(var(--spaceSm) + env(safe-area-inset-top)) var(--spaceMd) var(--spaceSm);
+    border-bottom: 1px solid var(--colorBorder);
+  }
+
+  .homeBody {
+    padding-bottom: var(--tabBarSpace);
+  }
+
+  .homePage {
+    padding-top: var(--spaceLg);
+  }
+
   /* Ending above the drawer's bar keeps the Map/Satellite switch and the
      credits clear of it */
   #map {
     height: var(--phoneMapHeight);
   }
 
-  /* The sidebar becomes a drawer along the bottom. Closed, only its bar
+  /* The sidebar becomes a drawer just above the tab bar. Closed, only its bar
      shows (see setDrawerOpen). It grows instead of sliding, because Driver.js
      turns off transforms on the parents of the tour's highlighted elements.
      Open, it covers part of the map, so it goes above Leaflet's controls
@@ -311,7 +659,7 @@ Media queries
   #sidebar {
     z-index: 1001 !important;
     top: auto;
-    bottom: 0;
+    bottom: var(--tabBarSpace);
     left: 0;
     display: flex;
     flex-direction: column;
@@ -419,7 +767,7 @@ Media queries
 
   /* With the drawer open, the card fits in the strip of map above it */
   body:has(#sidebar.drawerOpen) #activeAreaCalculator {
-    max-height: calc(100dvh - var(--drawerOpenHeight) - var(--edgeGap) - var(--phoneGap));
+    max-height: calc(100dvh - var(--tabBarSpace) - var(--drawerOpenHeight) - var(--edgeGap) - var(--phoneGap));
   }
 
   :root {
@@ -523,6 +871,21 @@ Media queries
     right: var(--zoomButtonsClearance);
     width: auto;
     margin-left: 0;
+  }
+}
+
+/* Hover effects only with a mouse, so they don't stay stuck after a tap */
+@media (hover: hover) {
+  .tabLink:hover {
+    color: var(--colorText);
+  }
+
+  .tabLink[aria-current='page']:hover {
+    color: var(--colorBrand);
+  }
+
+  .buttonLink:hover {
+    background-color: var(--colorBrandDark);
   }
 }
 
