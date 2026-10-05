@@ -305,6 +305,13 @@ hr {
   letter-spacing: 0.02em;
 }
 
+/* A teal ring around whatever the tour highlights, so the lit area reads as
+   a deliberate highlight. Inset, so it stays inside the hole in the dimmed
+   overlay. */
+#driver-highlighted-element-stage {
+  box-shadow: inset 0 0 0 3px var(--colorBrand);
+}
+
 .bb-dotted {
   border-bottom: 1px dotted var(--colorRule);
 }
@@ -1096,6 +1103,36 @@ Media queries
     max-width: none !important;
     max-height: calc(100dvh - 2 * var(--phoneGap));
     overflow-y: auto;
+  }
+
+  /* On the steps inside the drawer, a popover keeps to the space above it,
+     so it never covers what the tour points at. Long text scrolls, with the
+     buttons pinned. */
+  body:has(#sidebar.drawerTour) #driver-popover-item {
+    max-height: calc(100dvh - var(--tabBarSpace) - var(--drawerTourHeight) - 2 * var(--phoneGap));
+  }
+
+  /* When a popover scrolls, its buttons stay pinned at its bottom. The
+     footer takes over the popover's 15px bottom padding, so no text shows
+     below it (driver.min.css loads after this file, hence the !important).
+     flow-root contains Driver.js's floated buttons. */
+  #driver-popover-item {
+    padding-bottom: 0 !important;
+  }
+
+  #driver-popover-item .driver-popover-footer {
+    position: sticky;
+    bottom: 0;
+    display: flow-root;
+    padding: var(--spaceSm) 0 15px;
+    background-color: var(--colorSurface);
+  }
+
+  /* A tour step taller than the drawer is cut to the drawer's height, so its
+     highlight ends at the drawer's edge (see showTourStep) */
+  .tourStepClamp {
+    max-height: calc(var(--drawerTourHeight) - var(--drawerBarHeight));
+    overflow: hidden;
   }
 
   /* The popover's arrow would point at the wrong place. driver.min.css loads
