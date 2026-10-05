@@ -6,7 +6,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Roadmap item 2: A filter refactor (approved, ready to build)
+## Roadmap item 2: A filter refactor (built on the `claude/filter-refactor` branch, not merged)
 
 - [x] Plan approved in chat (2026-10-04), with the recommended choice for all four decisions at the end.
 
@@ -155,7 +155,99 @@ Districts that allow every type you turn on stay colored.
 
 </details>
 
-**Size:** this is the biggest item so far. If you'd like to spend your cloud credits, a cloud session could build it once you've approved it. I'd then re-test its branch here with the real CDNs before you merge.
+**Built** (2026-10-05, in a Claude Code cloud session):
+- **Where:** the `claude/filter-refactor` branch on your repo (`origin`, boobeh123/HawaiiZoningAtlas), branched from `main` at `7c70c8c`.
+- **Not done:** it isn't merged, so the live site hasn't changed.
+- **Before you merge:** the plan is for your VS Code session to re-test it with the real CDNs.
+
+**What changed:**
+- [data/filters.json](data/filters.json) (new): the five housing types, their option groups, the wording draft's labels and hints, and the data values each option stands for.
+  - **Lot sizes:** "Any size" is buckets A–E, "Under ½ acre" A–B, "Under 1 acre" A–C, and "Under 2 acres" A–D.
+  - **Hidden options:** minimum home size and elderly-only are listed for each type, and elderly-only for ADUs, so they come back on their own if the data ever varies.
+- [scripts/map.js](scripts/map.js):
+  - **`buildFilterControls()`:** builds the housing types from the config, all as text, with a `<fieldset>` and `<legend>` per group and real radio groups.
+  - **The translation layer:** `getHousingPairs()`, `getFilters()`, `getFormParams()`, and `restoreHousingFilters()` read and write the same link pairs as before.
+  - **`hideNoEffectOptions()`:** hides options that can't change the map.
+  - **`initMap()`:** loads the config before it restores a link and starts the tour.
+  - **The tour:** its housing, overlay, and opacity steps are reworded.
+  - **Removed:** the jQuery group-checkbox handler and the red "pick at least one" warning.
+- [map/index.html](map/index.html): the sidebar is semantic HTML with `style.css` classes, and no Tachyons.
+  - **Structure:**
+    - a screen-reader `<h1>`
+    - sections for the zone key and the housing types
+    - a `<fieldset>` for the overlays, with the draft's labels
+    - a real `<label>` for the opacity slider
+  - **Fixed:** the duplicate `PermittedResidentialUses` ID and the unclosed `<div id="Overlays">`.
+  - **Clear filters:** the ✕ became a "✕ Clear" button, as in the mockup.
+  - **Help line:** "Use checkboxes below to filter zones…" now says "Use the filters below to color the map…".
+  - **Unchanged:** the area panel keeps its Tachyons.
+- [style.css](style.css):
+  - **New blocks:** Utilities (`.visuallyHidden`) and Map sidebar, using the existing variables. On phones every filter row, overlay row, and the Clear button is at least 44 px tall.
+  - **Removed:** the old `.subgroup` and `.main-in-group` rules.
+  - **Headings:** they use `--colorTextMuted` (5.7:1) instead of the old 40% black, which failed AA contrast.
+- [data-pipeline/check_data.py](data-pipeline/check_data.py): it checks every value in `data/filters.json` instead of the checkboxes in the HTML.
+- **Docs:** CLAUDE.md (the filter contract, the translation layer, hidden options, Clear filters) and the README.
+
+**Claude's checks.** Headless Chromium compared `main` with the branch. The CDNs were served locally, so fonts and the basemap differ from the real site.
+- **Same coloring:** 35 links, each opened on `main` and on the branch, comparing every district's color, the link the page rewrites itself to, and the area panel's sentence.
+  - **The links:**
+    - each type alone
+    - each type by right only and hearing only
+    - 1-family under ½, 1, and 2 acres
+    - 2- and 3-family together
+    - ADUs with each rule
+    - a link with the hidden minimum-size and elderly options
+    - the 7 bad links from Feature 2
+    - the Honolulu transit link
+    - an old odd lot-size mix
+  - **33 identical.** Two differ, as decided:
+    - **"Good and bad values mixed" (Feature 2's last bad link):** it colors the same districts, but its empty lot-size group now opens as "Any size". So the link it rewrites itself to also lists `1MLS=A`…`E`: `townActive=Honolulu&1F=&1F=A&1MLS=A&1MLS=B&1MLS=C&1MLS=D&1MLS=E&opacity=50`.
+    - **Only ".47–.91"** (`1F=&1F=A&1F=AH&1MLS=C`): it opens as "Any size", per decision 1, so it colors more districts than before.
+- **Clicking the controls:**
+  - **1-family on:** writes `1F=&1F=A&1F=AH&1MLS=A…E`, exactly what the old pre-checked boxes wrote.
+  - **"By right only" and "Under 1 acre":** give `1F=A` and `1MLS=A,B,C`.
+  - **ADU "can be rented out":** adds `ARent=No`.
+  - **Clear:** removes them all, and keeps House and Senate.
+- **Hidden options:** minimum home size and elderly-only for all four types, elderly-only for ADUs, and the ADUs' "How it's allowed" are hidden. "Can be a separate building" shows, with the blank-answer hint.
+- **Keyboard and screen readers:**
+  - **Legends:** every fieldset has one.
+  - **Radios:** arrow keys move through a radio group and update the map and link.
+  - **Tab:** reaches every visible control. Within a radio group it stops on the chosen radio, as radio groups always do.
+  - **Focus ring:** each control shows a 2 px ring.
+- **Phones (375×667):**
+  - **Rows:** every filter, overlay, and Clear row is at least 44 px tall.
+  - **The bar:** says "2 filters on" with two types on.
+  - **Tour:** it opens the drawer for each sidebar step, including the new Housing types step.
+- **`check_data.py`:**
+  - **Passes** with the config.
+  - **Fails on a broken copy:** it names both a made-up value (`2MLS=Z`) and a misspelled key (`AOwner`).
+- **Errors:** no console or page errors in any run.
+
+**Your checks.** Run the site locally from the branch: `git fetch origin`, `git checkout claude/filter-refactor`, `python -m http.server 8000`, and open http://localhost:8000/map/.
+- [ ] **Do:** look at the sidebar. **You'll see:**
+  - "Housing types", with five plain checkboxes.
+  - Overlays with the new names.
+  - A "Zone opacity" label over the slider.
+  - **It means:** the sidebar is built from the new config and markup.
+- [ ] **Do:** turn on **1-family homes**. **You'll see:**
+  - "How it's allowed" and "Lot size needed" open, with "Either way" and "Any size" chosen.
+  - The map grays out districts that don't allow 1-family homes, the same ones as on the live site.
+  - **It means:** the new controls filter exactly as the old pre-checked boxes did.
+- [ ] **Do:** choose **Under ½ acre**. **You'll see:** more districts turn gray, and the address bar's link ends in `1MLS=A&1MLS=B&…`. **It means:** lot sizes are now ceilings that write the same link pairs as before.
+- [ ] **Do:** turn on **Accessory dwelling units (ADUs)**. **You'll see:**
+  - Its hint, and five rules worded positively, like "can be rented out", plus the note about blank answers.
+  - No "How it's allowed" group.
+  - **It means:** options that can't change today's map are hidden. No ADU district needs a hearing.
+- [ ] **Do:** open http://localhost:8000/map/#12/21.33752/-157.86051/1F=&1F=A&1F=AH&1MLS=A&1MLS=B&townActive=Honolulu&Overlay=transit&opacity=90 in a new tab. **You'll see:**
+  - 1-family homes on, with "Under ½ acre" chosen.
+  - Honolulu selected, and the rail stations showing.
+  - **It means:** links shared before this change still open the same filters.
+- [ ] **Do:** click **✕ Clear**. **You'll see:** every housing type turns off, and House and Senate stay on. **It means:** Clear filters still works with the new controls.
+- [ ] **Do:** press Tab from the top of the sidebar, then use the arrow keys inside "How it's allowed". **You'll see:** a ring on each control, and the arrows switch the choice. **It means:** the filters work from the keyboard.
+- [ ] **Do:** use the device toolbar (Ctrl+Shift+M) with iPhone SE, open the drawer, and turn on a type. **You'll see:** roomy rows, and "1 filter on" on the bar. **It means:** the phone drawer holds the new controls with full-size touch targets.
+- [ ] **Do:** run `localStorage.removeItem('hzaTourSeen')` and reload. **You'll see:** the third step is "Choose Housing Types", pointing at the new section. **It means:** the tour matches the new controls.
+- [ ] **Do:** in Git Bash from `data-pipeline/`, run `~/hza/Scripts/python check_data.py`. **You'll see:** "All checks passed". **It means:** every option in the config matches real data.
+- [ ] **Do:** read the labels and hints, and edit `data/filters.json` if you'd like different wording (decision 4). **You'll see:** your edits take effect on reload, with no HTML changes. **It means:** wording changes are now one-file edits.
 
 ---
 
@@ -1264,6 +1356,7 @@ This fixes review items #3 and #10.
   - Now: it's dropped, meaning `1MLS=Z` disappears from the URL. The URL ends in `/townActive=&opacity=90`.
 - [X] [Good and bad values mixed](http://localhost:8000/#9/20.4/-157.4/townActive=Honolulu&1F=&1F=A&opacity=50&bogus=1&1MLS=Z).
   - Now: Honolulu, **1-Family Housing** with "Allowed As of Right", and opacity 50 come back, and `bogus=1` and `1MLS=Z` drop out of the URL, which ends in `/townActive=Honolulu&1F=&1F=A&opacity=50`.
+  - Since roadmap item 2: the lot-size group can't be empty anymore, so it opens as "Any size". The URL ends in `/townActive=Honolulu&1F=&1F=A&1MLS=A&1MLS=B&1MLS=C&1MLS=D&1MLS=E&opacity=50`, and it colors the same districts.
   - The lot-size group turns red because none of its boxes are checked. That's the existing "pick at least one" warning, not a bug.
 
 ---
