@@ -196,9 +196,9 @@ Districts that allow every type you turn on stay colored.
 - **With JavaScript off:** the note in the HTML stays: "The county figures need JavaScript to show."
 
 **Your checks:**
-- [ ] Run the site locally and open http://localhost:8000. Under "How to read the map" there's "The four counties at a glance", a table of the four counties' income, housing cost burden, and Native Hawaiian residents. Honolulu has the highest income and also the highest share of households spending 30% or more of their income on housing.
-- [ ] Open the map, click any Honolulu district, and compare the panel's three figures with Honolulu's row on Home. They match ($106,195, 41.5% cost-burdened, 5.1% Native Hawaiian), because both read the same file.
-- [ ] In DevTools' device toolbar with iPhone SE, the table fits the screen without the page scrolling sideways.
+- [X] Run the site locally and open http://localhost:8000. Under "How to read the map" there's "The four counties at a glance", a table of the four counties' income, housing cost burden, and Native Hawaiian residents. Honolulu has the highest income and also the highest share of households spending 30% or more of their income on housing.
+- [X] Open the map, click any Honolulu district, and compare the panel's three figures with Honolulu's row on Home. They match ($106,195, 41.5% cost-burdened, 5.1% Native Hawaiian), because both read the same file.
+- [X] In DevTools' device toolbar with iPhone SE, the table fits the screen without the page scrolling sideways.
 
 ---
 
