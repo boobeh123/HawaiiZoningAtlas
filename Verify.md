@@ -6,9 +6,9 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Census data on Home (planned, waiting for your approval)
+## Census data on Home (built, not committed yet)
 
-- [ ] Approve this plan in chat.
+- [x] Plan approved in chat (2026-10-04).
 
 **Now, from data the site already has:** a "The four counties at a glance" table on Home. It comes from `data/demographics.js`, the file the map's area panel already uses (under 1 KB). These are today's numbers:
 
@@ -28,15 +28,28 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - **Phones:** the table fits a 375 px screen, or scrolls sideways inside its own box, never the page.
 - **Later, with item 3:** new Census tables, like housing units by the number of units per building, or rent and home values. Those need `tools/fetchDemographics.js` extended and then run with your key.
 
-**How Claude will check it:**
-- **Accuracy:** the table matches `data/demographics.js` exactly.
-- **Structure:** the caption and headers are read correctly as a table.
-- **Phones:** nothing overflows on an iPhone SE.
-- **Errors:** none.
+**What changed:**
+- **[index.html](index.html):** the new section, plus two deferred scripts in the head: `/data/demographics.js` and `/scripts/countyStats.js`.
+- **[scripts/countyStats.js](scripts/countyStats.js) (new):** builds the table with DOM methods, and sets every value as text. The data has no ʻokina in its keys, so the script spells out Hawaiʻi and Kauaʻi.
+- **[style.css](style.css):** the table's styles. Numbers are right-aligned in tabular figures, so the columns line up.
+- **Docs:** CLAUDE.md and the README.
+
+**Claude's checks** (headless Edge; all passed, no errors):
+- **Accuracy:** the table matches `data/demographics.js` exactly, from Hawaiʻi's $78,639 to Maui's 7.9%.
+- **Structure:** the caption names the source ("U.S. Census Bureau, 2020–2024 ACS 5-year estimates"). The four column headers are marked as columns, and the county names as row headers.
+- **iPhone SE (375 px):** the table fits at 343 px, and the page doesn't scroll sideways.
+- **320 px phones:** the table is a little wider than the screen, so it scrolls inside its own box while the page stays put.
+- **If the data file fails to load:** it says "The county figures couldn't load. Try reloading the page."
+- **With JavaScript off:** the note in the HTML stays: "The county figures need JavaScript to show."
+
+**Your checks:**
+- [ ] Run the site locally and open http://localhost:8000. Under "How to read the map" there's "The four counties at a glance", a table of the four counties' income, housing cost burden, and Native Hawaiian residents. Honolulu has the highest income and also the highest share of households spending 30% or more of their income on housing.
+- [ ] Open the map, click any Honolulu district, and compare the panel's three figures with Honolulu's row on Home. They match ($106,195, 41.5% cost-burdened, 5.1% Native Hawaiian), because both read the same file.
+- [ ] In DevTools' device toolbar with iPhone SE, the table fits the screen without the page scrolling sideways.
 
 ---
 
-## Roadmap item 1: A navbar and two pages (built, not committed yet)
+## Roadmap item 1: A navbar and two pages (built and committed)
 
 - [x] Plan approved in chat (2026-10-04), with the four decisions at the end and Home's wording as drafted.
 
@@ -160,11 +173,11 @@ Phone: Home                 Phone: Map                  Desktop: Map
 - **The pipeline:** `check_data.py` passes with the new path.
 
 **Your checks:**
-- [ ] Run the site locally and open http://localhost:8000. Home shows "Where can you build homes in Hawaiʻi?" On desktop, the top bar has Home underlined in teal.
-- [ ] Click **Open the map**. The map opens at `/map/`, with Map underlined in the top bar, and works as before. Then click **Home** in the bar to come back.
-- [ ] On Home, click the first **Open this view** link. The map opens on Oʻahu with 1-Family Housing on and only the two smallest lot sizes checked. The colored areas are where a house is allowed on less than half an acre, and the gray covers the rest of the island.
-- [ ] Open http://localhost:8000/#13/21.33752/-157.86051, an old-style link. It lands on `/map/#13/…` at the same spot.
-- [ ] In DevTools' device toolbar with iPhone SE, open http://localhost:8000. The brand is at the top and Home · Map is along the bottom. Tap **Map**: the Filters & overlays bar sits just above the tab bar, and tapping it opens the drawer with the islands still in view.
+- [X] Run the site locally and open http://localhost:8000. Home shows "Where can you build homes in Hawaiʻi?" On desktop, the top bar has Home underlined in teal.
+- [X] Click **Open the map**. The map opens at `/map/`, with Map underlined in the top bar, and works as before. Then click **Home** in the bar to come back.
+- [X] On Home, click the first **Open this view** link. The map opens on Oʻahu with 1-Family Housing on and only the two smallest lot sizes checked. The colored areas are where a house is allowed on less than half an acre, and the gray covers the rest of the island.
+- [X] Open http://localhost:8000/#13/21.33752/-157.86051, an old-style link. It lands on `/map/#13/…` at the same spot.
+- [X] In DevTools' device toolbar with iPhone SE, open http://localhost:8000. The brand is at the top and Home · Map is along the bottom. Tap **Map**: the Filters & overlays bar sits just above the tab bar, and tapping it opens the drawer with the islands still in view.
 
 **Decisions** (answered in chat, 2026-10-04):
 1. [x] **Phone map page:** no brand header, so the map stays full-screen.
@@ -241,8 +254,8 @@ This atlas supports the National Zoning Atlas movement, with support from Code w
 | Phone at 13 or at 7 | only zooms in | the same |
 
 **Your checks** (on desktop):
-- [ ] Open http://localhost:8000/#13/21.33752/-157.86051 and click the district in the middle. The panel opens, and the map stays where it is: the URL still starts with `#13/`. Before, it zoomed out to fit all of Oʻahu, so you lost your place.
-- [ ] Zoom out until you see every island, and click Maui. The map zooms in to fit Maui. From far out, a click still takes you to the county you picked.
+- [X] Open http://localhost:8000/#13/21.33752/-157.86051 and click the district in the middle. The panel opens, and the map stays where it is: the URL still starts with `#13/`. Before, it zoomed out to fit all of Oʻahu, so you lost your place.
+- [X] Zoom out until you see every island, and click Maui. The map zooms in to fit Maui. From far out, a click still takes you to the county you picked.
 
 ---
 
@@ -334,9 +347,11 @@ These ideas came from our chat on 2026-10-04 and were only in chat until now. Th
    - **Stats:** the pipeline writes a small `data/stats.json`, so Home never downloads the 12.6 MB map file. The weekly sync keeps it current.
    - **Census:** more tables from `tools/fetchDemographics.js`, which you run, since the key stays on your machine. For example, housing units by number of units per building would show what's built next to what zoning allows.
    - **Charts:** plain HTML and CSS, each with a table under it, so no new library.
-   - [ ] **Before any chart:** check Honolulu's 3- and 4+-family coding against the master sheet. Its Agricultural districts and R-5 through R-10 are coded as allowing them as of right.
-     - **The effect:** 1-family, 2-family, and 4+-family housing each light up 61% of Honolulu's zoned land, so the map looks almost the same whichever one you pick.
-     - **The contrast:** Maui shows the story the atlas is meant to tell. 1-family homes are allowed on 35% of its zoned land, and 4+-family homes on 1%.
+   - [ ] **To do before any chart, not a check of something built:** settle whether Honolulu's apartment coding is right. Leave this box empty until then.
+     - **What the spreadsheet says:** Honolulu's main residential districts (R-5 through R-10) and its farm districts allow buildings with 3 or more homes "as of right", meaning no hearing is needed.
+     - **What the districts' own notes say:** buildings with 3 or more homes are allowed only through a planned development, which needs a public hearing. If the notes are right, those districts should say "public hearing" instead.
+     - **Why it matters:** as coded, 1-family, 2-family, and 4+-family housing each light up 61% of Honolulu's zoned land, so the map looks almost the same whichever one you pick. Maui shows the story the atlas is meant to tell: 1-family homes are allowed on 35% of its zoned land, and 4+-family homes on 1%.
+     - **How:** Claude can read Honolulu's zoning code and propose a fix. Fixes go in `pull_sheet.py`, because the team's sheet stays untouched.
 
 **Recommended order: 1, 2, 3.**
 - **The navbar and pages come first:** they're the frame the other two live in.
@@ -650,7 +665,7 @@ Netlify sends today's `final.geojson` as 8.6 MB, so expect about 3.2 MB once thi
 **Your checks:**
 - [x] After the push, open your repo on GitHub → **Actions** → **Pull and Validate Spreadsheet Data** → **Run workflow**. It finishes green, and the "Check whether the spreadsheet changed" step says "The spreadsheet hasn't changed, so there's nothing to push."
   - Your run on 2026-10-04 passed in 21 seconds. It pulled and validated the sheet, found no changes, and skipped the rebuild and push. That also shows the CSV comes out byte-identical on GitHub's Linux servers.
-- [ ] Optional, in Git Bash from `data-pipeline/`: `~/hza/Scripts/python pull_sheet.py`. It prints "No changes", and `git status` stays clean.
+- [X] Optional, in Git Bash from `data-pipeline/`: `~/hza/Scripts/python pull_sheet.py`. It prints "No changes", and `git status` stays clean.
 
 ---
 
@@ -728,7 +743,7 @@ No HTML changes.
 - [X] Turn on **1-Family Housing** in the panel, then tap Oʻahu. The area panel appears across the top of the map, and the zoom buttons stay clear.
 - [X] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. Every popover fits on screen.
 - [X] Switch to a tablet, such as iPad Mini, and tap a county. The area panel sits beside the sidebar, not under it.
-- [ ] Turn off the device toolbar. The desktop layout looks the same as before.
+- [X] Turn off the device toolbar. The desktop layout looks the same as before.
 
 **Left for Feature 12 (mobile drawer):** a button to hide and show the panel. Also, the tour text still says "the menu on the left-hand side". *(Both done in Feature 12.)*
 
@@ -750,7 +765,7 @@ No HTML changes.
 **Your checks.** Open each link in a new tab:
 - [X] Open http://localhost:8000. House and Senate are on.
 - [x] Uncheck **House District**, copy the URL, and open it in a new tab. House stays off and Senate stays on.
-- [ ] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. After a few seconds, the URL ends in `/townActive=&opacity=90`, and House and Senate are off.
+- [X] Open http://localhost:8000/#9/20.4/-157.4/townActive=Nowhere. After a few seconds, the URL ends in `/townActive=&opacity=90`, and House and Senate are off.
 
 ---
 
