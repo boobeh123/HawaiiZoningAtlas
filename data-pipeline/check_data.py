@@ -24,7 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 DATA = REPO / "data" / "final.geojson"
-INDEX = REPO / "index.html"
+INDEX = REPO / "map" / "index.html"
 
 COUNTIES = {"Hawaii", "Honolulu", "Kauai", "Maui"}
 
@@ -47,7 +47,7 @@ FLAG_VALUES = {
 
 
 class CheckboxParser(HTMLParser):
-    """Collects the name and value of every checkbox in index.html."""
+    """Collects the name and value of every checkbox on the map page."""
 
     def __init__(self):
         super().__init__()
