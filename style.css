@@ -154,7 +154,37 @@ hr {
   margin-left: calc(var(--areaPanelWidth) / -2);
   left: 50%;
   z-index: 999;
+  /* Room on the right for the close button. The ID beats Tachyons' pa3. */
+  padding-right: 40px;
   font-size: 0.95em;
+}
+
+/* The ✕ in the panel's top corner (see buildAreaCloseButton) */
+.areaCloseButton {
+  position: absolute;
+  top: var(--spaceXs);
+  right: var(--spaceXs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--colorTextMuted);
+  cursor: pointer;
+}
+
+/* Two classes, to beat the 24px in Google's .material-icons rule */
+.areaCloseButton.material-icons {
+  font-size: var(--fontSizeLg);
+}
+
+.areaCloseButton:focus-visible {
+  outline: 2px solid var(--colorBrand);
+  outline-offset: -2px;
 }
 
 /* Row of county stats under the area calculation */
@@ -1005,6 +1035,15 @@ Media queries
     right: var(--zoomButtonsClearance);
     width: auto;
     margin-left: 0;
+    padding-right: 48px;
+  }
+
+  /* A full-size touch target in the card's corner, beside the header */
+  .areaCloseButton {
+    top: 2px;
+    right: 2px;
+    width: 44px;
+    height: 44px;
   }
 
   /* The area card keeps to the top of the map, so the middle stays free for
