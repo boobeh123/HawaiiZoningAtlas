@@ -90,7 +90,7 @@
 
 	<div class="pa3 shadow-1 dn bg-white" id="activeAreaCalculator"></div>
 
-	<div id="sidebar" class="pa3 br1">
+	<div id="sidebar">
 		<!-- Phones only: opens and closes the sidebar as a drawer (see setDrawerOpen) -->
 		<button type="button" id="drawerToggle" aria-expanded="false" aria-controls="HiZoningAtlas">
 			<span class="material-icons" aria-hidden="true">expand_less</span>
@@ -99,480 +99,116 @@
 		</button>
 
 		<div id="HiZoningAtlas">
-		<div class="cf">
-			<img class="sidebarLogo" src="/img/hi-zoning-atlas-logo.png" alt="HI Zoning Atlas" />
-		</div>
+			<img class="sidebarLogo" src="/img/hi-zoning-atlas-logo.png" alt="" />
+			<h1 class="visuallyHidden">Hawaii Zoning Atlas map</h1>
 
-		<h1 class="f3 mv2 black-90 dn">Hawaii Zoning Atlas</h1>
+			<p class="sidebarIntro">
+				This interactive map explores how restrictive zoning laws can make it
+				difficult to build diverse, affordable housing.
+			</p>
 
-		<p class="f5 mv2">
-			This interactive map explores how restrictive zoning laws can make it
-			difficult to build diverse, affordable housing.
-		</p>
+			<p class="sidebarHelp">
+				Use the filters below to color the map. Click a county to see
+				what % of its territory satisfies the filters.
+			</p>
 
-		<p class="f6 mv2">
-			Use checkboxes below to filter zones in the map. Click a county to see
-			what % of its territory satisfies selected criteria.
-		</p>
+			<form id="form">
+				<input type="hidden" name="townActive" value="" />
 
-		<form id="form" class="f6 lh-title">
-			<input type="hidden" name="townActive" value="" />
+				<section id="TypeOfZoningDistrict" aria-labelledby="zoneTypesHeading">
+					<h2 class="sidebarHeading" id="zoneTypesHeading">Type of Zoning District</h2>
+					<!-- Each square's color comes from zone2color in map.js -->
+					<ul id="legend" class="legendList">
+						<li>
+							<span class="square" data-zone="R"></span> Primarily Residential
+							<span class="legendNote">(satisfies criteria)</span>
+						</li>
+						<li>
+							<span class="square" data-zone="M"></span> Mixed with Residential
+							<span class="legendNote">(satisfies criteria)</span>
+						</li>
+						<li>
+							<span class="square" data-zone="N"></span> Nonresidential Zone
+							<span class="legendNote">(satisfies criteria)</span>
+						</li>
+						<li>
+							<span class="square" data-zone="NS"></span> Any Zone Not Satisfying Criteria
+						</li>
+					</ul>
+				</section>
 
-			<div id="TypeOfZoningDistrict">
-				<h2 class="f5 mb1 black-40">Type of Zoning District</h2>
-
-				<ul id="legend" class="list pl0 mt0">
-					<li>
-						<span class="square" title="R"></span> Primarily Residential
-						<span class="black-40 i">(satisfies criteria)</span>
-					</li>
-					<li>
-						<span class="square" title="M"></span> Mixed with Residential
-						<span class="black-40 i">(satisfies criteria)</span>
-					</li>
-					<li>
-						<span class="square" title="N"></span> Nonresidential Zone
-						<span class="black-40 i">(satisfies criteria)</span>
-					</li>
-					<li>
-						<span class="square" title="NS"></span> Any Zone Not Satisfying
-						Criteria
-					</li>
-				</ul>
-			</div>
-
-			<div id="PermittedResidentialUses">
-				<div class="cf mv1">
-					<h2 class="f5 mv0 black-40 fl" id="PermittedResidentialUses">
-						Permitted Residential Uses
-					</h2>
-					<!-- Shown while a housing filter or a county is active (see updateResetButton) -->
-					<button type="button" class="fr pa0 bn material-icons dim black-50 bg-light-gray br-100" id="resetFilters"
-						title="Clear filters" aria-label="Clear filters" hidden>clear</button>
-				</div>
-
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" class="w1 h1 main-in-group" name="1F" value="" />
-						<span>1-Family Housing</span>
-					</label>
-
-					<div class="pl1 subgroup dn pb2 bb b--black-10">
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1F" value="A" />
-								Allowed As of Right
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1F" value="AH" />
-								Allowed Only After Public Hearing
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Minimum Lot Size, acres</h5>
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1MLS" value="A" />
-								None
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1MLS" value="B" />
-								.01-.46
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1MLS" value="C" />
-								.47–.91
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1MLS" value="D" />
-								.92–1.83
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="1MLS" value="E" />
-								1.84+
-							</label>
-						</div>
-
-						<div class="mt2 pa1">
-							<label>
-								<input type="checkbox" name="1MUS" value="0" />
-								No Minimum Unit Size Requirement
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" name="1E" value="No" />
-								Not Restricted to Elderly Only
-							</label>
-						</div>
+				<section id="HousingTypes" aria-labelledby="housingTypesHeading">
+					<div class="sectionHeader">
+						<h2 class="sidebarHeading" id="housingTypesHeading">Housing types</h2>
+						<!-- Shown while a housing filter or a county is active (see updateResetButton) -->
+						<button type="button" class="clearButton" id="resetFilters" aria-label="Clear filters" hidden>
+							<span class="material-icons" aria-hidden="true">close</span>
+							Clear
+						</button>
 					</div>
-				</div>
+					<p class="sidebarHelp">
+						Turn on a type to see only the districts that allow it. Districts that
+						allow every type you turn on stay colored.
+					</p>
+					<!-- Built from data/filters.json (see buildFilterControls in map.js) -->
+					<ul class="housingTypeList" id="housingTypeList"></ul>
+				</section>
 
-				<!-- 2-Family -->
+				<fieldset class="overlayGroup" id="Overlays">
+					<legend class="sidebarHeading">Overlays</legend>
+					<!-- Overlay loading and error messages, announced to screen readers -->
+					<p class="overlayStatus" id="overlayStatus" role="status"></p>
 
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" name="2F" class="w1 h1 main-in-group" value="" />
-						<span>2-Family Housing</span>
+					<label class="filterOption"
+						title="Includes ponds, lakes, oceans, swamps, and the area covered by large rivers, streams, and/or canals. Data from USG National Hydrography Dataset-Hawaii.">
+						<input type="checkbox" name="Overlay" value="hydro" />
+						Waterways
 					</label>
-
-					<div class="pl1 subgroup dn pb2 bb b--black-10">
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2F" value="A" />
-								Allowed As of Right
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2F" value="AH" />
-								Allowed Only After Public Hearing
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Minimum Lot Size, acres</h5>
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2MLS" value="A" />
-								None
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2MLS" value="B" />
-								.01-.46
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2MLS" value="C" />
-								.47–.91
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2MLS" value="D" />
-								.92–1.83
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="2MLS" value="E" />
-								1.84+
-							</label>
-						</div>
-
-						<div class="mt2 pa1">
-							<label>
-								<input type="checkbox" name="2MUS" value="0" />
-								No Minimum Unit Size Requirement
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" name="2E" value="No" />
-								Not Restricted to Elderly Only
-							</label>
-						</div>
-					</div>
-				</div>
-
-				<!-- 3-Family -->
-
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" name="3F" class="w1 h1 main-in-group" value="" />
-						<span>3-Family Housing</span>
+					<label class="filterOption" title="Federal Government Owned Lands">
+						<input type="checkbox" name="Overlay" value="federal" />
+						Federal lands
 					</label>
-
-					<div class="pl1 subgroup dn pb2 bb b--black-10">
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3F" value="A" />
-								Allowed As of Right
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3F" value="AH" />
-								Allowed Only After Public Hearing
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Minimum Lot Size, acres</h5>
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3MLS" value="A" />
-								None
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3MLS" value="B" />
-								.01-.46
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3MLS" value="C" />
-								.47–.91
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3MLS" value="D" />
-								.92–1.83
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="3MLS" value="E" />
-								1.84+
-							</label>
-						</div>
-
-						<div class="mt2 pa1">
-							<label>
-								<input type="checkbox" name="3MUS" value="0" />
-								No Minimum Unit Size Requirement
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" name="3E" value="No" />
-								Not Restricted to Elderly Only
-							</label>
-						</div>
-					</div>
-				</div>
-
-				<!-- 4+ Family -->
-
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" name="4F" class="w1 h1 main-in-group" value="" />
-						<span>4+ Family Housing</span>
+					<label class="filterOption" title="State Government Land Ownership">
+						<input type="checkbox" name="Overlay" value="state" />
+						State lands
 					</label>
-
-					<div class="pl1 subgroup dn pb2 bb b--black-10">
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4F" value="A" />
-								Allowed As of Right
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4F" value="AH" />
-								Allowed Only After Public Hearing
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Minimum Lot Size, acres</h5>
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4MLS" value="A" />
-								None
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4MLS" value="B" />
-								.01-.46
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4MLS" value="C" />
-								.47–.91
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4MLS" value="D" />
-								.92–1.83
-							</label>
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="4MLS" value="E" />
-								1.84+
-							</label>
-						</div>
-
-						<div class="mt2 pa1">
-							<label>
-								<input type="checkbox" name="4MUS" value="0" />
-								No Minimum Unit Size Requirement
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" name="4E" value="No" />
-								Not Restricted to Elderly Only
-							</label>
-						</div>
-					</div>
-				</div>
-
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" class="w1 h1 main-in-group" name="AD" value="" />
-						<span>Accessory Dwelling Units</span>
+					<label class="filterOption"
+						title="DHHL Lands are lands held in trust by the State of Hawaii for the benefit of Native Hawaiians. Data from DHHL.">
+						<input type="checkbox" name="Overlay" value="DHHL" />
+						Hawaiian Home Lands (DHHL)
 					</label>
-
-					<div class="pl1 subgroup dn pb2 bb b--black-10">
-						<div class="at-least-one-checked pa1 br1">
-							<label>
-								<input type="checkbox" class="checked-by-default" name="AD" value="A" />
-								Allowed As of Right
-							</label>
-
-							<br />
-
-							<label>
-								<input type="checkbox" class="checked-by-default" name="AD" value="AH" />
-								Allowed Only After Public Hearing
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Occupancy Requirements</h5>
-						<div class="ph1">
-							<label>
-								<input type="checkbox" name="AOwn" value="No" /> Allows
-								Non-Owner Occupancy
-							</label>
-							<br />
-
-							<label>
-								<input type="checkbox" name="AFam" value="No" /> Allows
-								Non-Family/Non-Employees
-							</label>
-							<br />
-
-							<label>
-								<input type="checkbox" name="ARent" value="No" /> Allows
-								Renters
-							</label>
-							<br />
-
-							<label>
-								<input type="checkbox" name="AEld" value="No" /> Not
-								Restricted to Elderly Only
-							</label>
-						</div>
-
-						<h5 class="f6 mb0 mt2 black-80 pl1">Physical Requirements</h5>
-						<div class="ph1">
-							<label>
-								<input type="checkbox" name="APrim" value="No" /> Not
-								Restricted to Primary Structure
-							</label>
-							<br />
-
-							<label>
-								<input type="checkbox" name="ASize" value="No" /> No Maximum
-								Size Limitation
-							</label>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div id="Overlays">
-				<h2 class="f5 mb1 black-40">Overlays</h2>
-				<!-- Overlay loading and error messages, announced to screen readers -->
-				<p class="overlayStatus" id="overlayStatus" role="status"></p>
-
-				<label class="f5"
-					title="Includes ponds, lakes, oceans, swamps, and the area covered by large rivers, streams, and/or canals. Data from USG National Hydrography Dataset-Hawaii.">
-					<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="hydro" />
-					Waterways
-				</label>
-
-				<br />
-
-				<label class="f5" title="Federal Government Owned Lands">
-					<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="federal" />
-					Federal Lands
-				</label>
-
-				<br />
-
-				<label class="f5" title="State Government Land Ownership">
-					<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="state" />
-					State Lands
-				</label>
-
-				<br />
-
-				<label class="f5"
-					title="DHHL Lands are lands held in trust by the State of Hawaii for the benefit of Native Hawaiians. Data from DHHL.">
-					<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="DHHL" />
-					DHHL Lands
-				</label>
-
-				<!-- <br /> -->
-
-				<!-- <label class="f5" title="">
-						<input
-							type="checkbox"
-							class="h1 w1 main-in-group"
-							name="Overlay"
-							value="sewer"
-						/>
-						Sewer Service Areas
-					</label> -->
-
-				<div class="filter-group">
-					<label class="f5">
-						<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="transit" />
-						Transit Stations (Rail)
+					<label class="filterOption">
+						<input type="checkbox" name="Overlay" value="transit" />
+						Rail stations (½-mile circles)
 					</label>
+					<label class="filterOption">
+						<input type="checkbox" name="Overlay" value="house" checked />
+						State House districts
+					</label>
+					<label class="filterOption">
+						<input type="checkbox" name="Overlay" value="senate" checked />
+						State Senate districts
+					</label>
+				</fieldset>
 
-					<div class="pl1 dn subgroup pb2 bb b--black-10">
-						<span class="f6 black-50 ml3 pl1 i">Circles represent 0.5-mile radius</span>
-					</div>
+				<div id="ZoneOpacity">
+					<label class="sidebarHeading" for="opacity">Zone opacity</label>
+					<input type="range" id="opacity" name="opacity" min="1" max="100" value="90" />
 				</div>
-	
-				<label class="f5"
-					title="House">
-					<input type="checkbox" class="h1 w1 main-in-group" name="Overlay" value="house" checked/>
-					House District
-				</label>
+			</form>
 
-				<br />
-
-				<label class="f5" 
-					title="Senate">
-          <input type="checkbox" class="h1 w1 main-in-group" name="Overlay"
-          value="senate" 
-		  checked/>
-          Senate Districts
-        </label>		
-
-			<div id="ZoneOpacity">
-				<h2 class="f5 mb1 black-40">Zone Opacity</h2>
-				<input type="range" min="1" max="100" value="90" name="opacity" />
-			</div>
-		</form>
-
-		<p class="black-40 f6 mb0">
-			This map was created to support the
-			<a href="http://www.zoningatlas.org/" class="link dim black-50 underline" target="_blank">National Zoning
-				Atlas</a>
-			movement, with support from
-			<a href="https://codewithaloha.org/" class="link dim black-50 underline" target="_blank">Code with
-				Aloha</a>,
-			Faith Action, and the
-			<a href="https://www.mercatus.org" class="link dim black-50 underline" target="_blank">Mercatus Center</a>.
-		</p>
-		<p class="black-40 f6 mb0">
-			Data and code hosted open-source on <a href="https://github.com/boobeh123/HawaiiZoningAtlas"
-				class="link dim black-50 underline" target="_blank">GitHub</a>.
-		</p>
+			<p class="sidebarCredits">
+				This map was created to support the
+				<a href="http://www.zoningatlas.org/" target="_blank">National Zoning Atlas</a>
+				movement, with support from
+				<a href="https://codewithaloha.org/" target="_blank">Code with Aloha</a>,
+				Faith Action, and the
+				<a href="https://www.mercatus.org" target="_blank">Mercatus Center</a>.
+			</p>
+			<p class="sidebarCredits">
+				Data and code hosted open-source on
+				<a href="https://github.com/boobeh123/HawaiiZoningAtlas" target="_blank">GitHub</a>.
+			</p>
 		</div>
 	</div>
 	</main>
