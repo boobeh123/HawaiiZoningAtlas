@@ -1,0 +1,184 @@
+{
+  "about": "The map's housing filters. map.js builds the sidebar's controls from this file, and data-pipeline/check_data.py checks every value against the map data. Each type's key, and each group's or option's key, is a property in final.geojson; each value is one answer it can have. A choice group is a set of radio buttons whose first choice is the default; a rules group is a set of checkboxes. In links, a type that's on writes 'key=' and then its pairs in this file's order.",
+  "housingTypes": [
+    {
+      "key": "1F",
+      "label": "1-family homes",
+      "groups": [
+        {
+          "type": "choice",
+          "key": "1F",
+          "legend": "How it's allowed",
+          "hint": "By right means the county approves it when it meets the rules, with no public hearing.",
+          "choices": [
+            { "label": "Either way", "values": ["A", "AH"] },
+            { "label": "By right only", "values": ["A"] },
+            { "label": "Only after a public hearing", "values": ["AH"] }
+          ]
+        },
+        {
+          "type": "choice",
+          "key": "1MLS",
+          "legend": "Lot size needed",
+          "hint": "The smallest lot this kind of home needs. Districts with no minimum count as any size.",
+          "choices": [
+            { "label": "Any size", "values": ["A", "B", "C", "D", "E"] },
+            { "label": "Under ½ acre", "values": ["A", "B"] },
+            { "label": "Under 1 acre", "values": ["A", "B", "C"] },
+            { "label": "Under 2 acres", "values": ["A", "B", "C", "D"] }
+          ]
+        },
+        {
+          "type": "rules",
+          "legend": "Only show districts where these homes…",
+          "options": [
+            { "key": "1MUS", "value": "0", "label": "have no minimum size" },
+            { "key": "1E", "value": "No", "label": "aren't limited to elderly residents" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "2F",
+      "label": "2-family homes (duplexes)",
+      "groups": [
+        {
+          "type": "choice",
+          "key": "2F",
+          "legend": "How it's allowed",
+          "hint": "By right means the county approves it when it meets the rules, with no public hearing.",
+          "choices": [
+            { "label": "Either way", "values": ["A", "AH"] },
+            { "label": "By right only", "values": ["A"] },
+            { "label": "Only after a public hearing", "values": ["AH"] }
+          ]
+        },
+        {
+          "type": "choice",
+          "key": "2MLS",
+          "legend": "Lot size needed",
+          "hint": "The smallest lot this kind of home needs. Districts with no minimum count as any size.",
+          "choices": [
+            { "label": "Any size", "values": ["A", "B", "C", "D", "E"] },
+            { "label": "Under ½ acre", "values": ["A", "B"] },
+            { "label": "Under 1 acre", "values": ["A", "B", "C"] },
+            { "label": "Under 2 acres", "values": ["A", "B", "C", "D"] }
+          ]
+        },
+        {
+          "type": "rules",
+          "legend": "Only show districts where these homes…",
+          "options": [
+            { "key": "2MUS", "value": "0", "label": "have no minimum size" },
+            { "key": "2E", "value": "No", "label": "aren't limited to elderly residents" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "3F",
+      "label": "3-family homes (triplexes)",
+      "groups": [
+        {
+          "type": "choice",
+          "key": "3F",
+          "legend": "How it's allowed",
+          "hint": "By right means the county approves it when it meets the rules, with no public hearing.",
+          "choices": [
+            { "label": "Either way", "values": ["A", "AH"] },
+            { "label": "By right only", "values": ["A"] },
+            { "label": "Only after a public hearing", "values": ["AH"] }
+          ]
+        },
+        {
+          "type": "choice",
+          "key": "3MLS",
+          "legend": "Lot size needed",
+          "hint": "The smallest lot this kind of home needs. Districts with no minimum count as any size.",
+          "choices": [
+            { "label": "Any size", "values": ["A", "B", "C", "D", "E"] },
+            { "label": "Under ½ acre", "values": ["A", "B"] },
+            { "label": "Under 1 acre", "values": ["A", "B", "C"] },
+            { "label": "Under 2 acres", "values": ["A", "B", "C", "D"] }
+          ]
+        },
+        {
+          "type": "rules",
+          "legend": "Only show districts where these homes…",
+          "options": [
+            { "key": "3MUS", "value": "0", "label": "have no minimum size" },
+            { "key": "3E", "value": "No", "label": "aren't limited to elderly residents" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "4F",
+      "label": "4+ family homes (apartment buildings)",
+      "groups": [
+        {
+          "type": "choice",
+          "key": "4F",
+          "legend": "How it's allowed",
+          "hint": "By right means the county approves it when it meets the rules, with no public hearing.",
+          "choices": [
+            { "label": "Either way", "values": ["A", "AH"] },
+            { "label": "By right only", "values": ["A"] },
+            { "label": "Only after a public hearing", "values": ["AH"] }
+          ]
+        },
+        {
+          "type": "choice",
+          "key": "4MLS",
+          "legend": "Lot size needed",
+          "hint": "The smallest lot this kind of home needs. Districts with no minimum count as any size.",
+          "choices": [
+            { "label": "Any size", "values": ["A", "B", "C", "D", "E"] },
+            { "label": "Under ½ acre", "values": ["A", "B"] },
+            { "label": "Under 1 acre", "values": ["A", "B", "C"] },
+            { "label": "Under 2 acres", "values": ["A", "B", "C", "D"] }
+          ]
+        },
+        {
+          "type": "rules",
+          "legend": "Only show districts where these homes…",
+          "options": [
+            { "key": "4MUS", "value": "0", "label": "have no minimum size" },
+            { "key": "4E", "value": "No", "label": "aren't limited to elderly residents" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "AD",
+      "label": "Accessory dwelling units (ADUs)",
+      "hint": "A second, smaller home on the same lot, like a backyard cottage or an ʻohana unit.",
+      "groups": [
+        {
+          "type": "choice",
+          "key": "AD",
+          "legend": "How it's allowed",
+          "hint": "By right means the county approves it when it meets the rules, with no public hearing.",
+          "choices": [
+            { "label": "Either way", "values": ["A", "AH"] },
+            { "label": "By right only", "values": ["A"] },
+            { "label": "Only after a public hearing", "values": ["AH"] }
+          ]
+        },
+        {
+          "type": "rules",
+          "legend": "Only show districts where an ADU…",
+          "hint": "A rule also hides districts the researchers left blank on it.",
+          "options": [
+            { "key": "AOwn", "value": "No", "label": "doesn't need the owner to live on the property" },
+            { "key": "ARent", "value": "No", "label": "can be rented out" },
+            { "key": "AFam", "value": "No", "label": "can house anyone, not just family or employees" },
+            { "key": "APrim", "value": "No", "label": "can be a separate building, like over a garage" },
+            { "key": "ASize", "value": "No", "label": "has no size cap" },
+            { "key": "AEld", "value": "No", "label": "isn't limited to elderly residents" }
+          ]
+        }
+      ]
+    }
+  ]
+}

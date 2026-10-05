@@ -217,14 +217,14 @@ The site has two pages, linked by a Home · Map navbar. It's a tab bar along the
   - **What's on it:** what the atlas shows, how to read the map, and "Try it" links that open the map already set up.
   - **How it's built:** plain HTML and CSS with no map scripts, so it loads in a fraction of the map's size.
   - **Old links:** anything shared from the map before it moved to `/map/` still works, because [scripts/home.js](scripts/home.js) sends it there.
-- **The map** ([map/index.html](map/index.html), at `/map/`): it holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. **Tachyons** classes handle the layout.
+- **The map** ([map/index.html](map/index.html), at `/map/`): it holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. The sidebar is semantic HTML styled by `style.css`; only the area panel still uses **Tachyons** classes.
 
 - **Loading:** `loadMapData()` fetches the county outlines and the zoning districts in parallel. A status message shows until they arrive, or explains the error if they don't
-- **Filters:** each checkbox's `name` is a property in `final.geojson`, and its `value` is one accepted answer (`name="1F" value="AH"` means 1-family housing allowed only after a public hearing). A district keeps its color only if it matches every checked group; otherwise it turns gray
+- **Filters:** one config, [data/filters.json](data/filters.json), lists each housing type, its options, their labels, and the data values each option matches (`1F` / `AH` means 1-family housing allowed only after a public hearing). `map.js` builds the controls from it, as checkboxes and radio groups with legends. A district keeps its color only if it matches every type that's on; otherwise it turns gray. Options that can't change the map with today's data are hidden until the data can tell districts apart
 - **Area calculator:** clicking a district selects its county. The panel adds up the zoned acres of that county's matching districts, shows them as a share of the county's total, and lists the county's Census stats from [data/demographics.js](data/demographics.js)
 - **Overlays:** each overlay downloads the first time it's turned on and stays cached after that, so the 11 MB waterways file only loads for visitors who ask for it. A status line reports loading and errors
 - **District labels:** each House and Senate label sits at the center of its district's largest piece, or in the widest part of the shape when that center falls outside it. After every zoom, labels are placed largest district first, and each one shows only if its district has room for it on screen and it doesn't overlap another label
-- **Shareable links:** the map view and every filter are saved in the URL (`#zoom/lat/lng/filters`) with `URLSearchParams`. Opening a link restores only values that match a real checkbox, and a link with junk in it gets rewritten
+- **Shareable links:** the map view and every filter are saved in the URL (`#zoom/lat/lng/filters`) with `URLSearchParams`. Opening a link restores only values that match a real filter, and a link with junk in it gets rewritten. Links keep the format they've always had, so older shared links still work
 - **Safe rendering:** tooltips and panels are built from text nodes (`createTextElement()`), never from HTML strings, so text from the spreadsheet or a link can't run as code
 - **Basemaps:** CARTO's light basemap or Esri satellite imagery, with CARTO's place names drawn above the zoning districts. There's one CARTO API key for local development and another for the live site
 - **Analytics:** Google Analytics loads from [scripts/analytics.js](scripts/analytics.js) and skips local visits
@@ -279,10 +279,14 @@ It finds each value by its label, because the Census Bureau renumbers variables 
   - **The map's new home:** it moved to `/map/`, and old shared links forward there.
   - **Navbar:** a Home · Map tab bar links the two pages. On phones it sits under the filters drawer.
 - **Census on Home:** a table puts the four counties' Census figures side by side. It's built from the same data file the map uses, so the two can't drift apart.
+- **Filter refactor:** the filters are built from one config file, as plain-language housing types with radio-button choices.
+  - **Choices:** "by right only" or "only after a public hearing", and lot-size ceilings like "Under ½ acre" instead of ".01-.46".
+  - **ADU rules:** positively worded, with no double negatives.
+  - **Hidden options:** ones that change nothing on today's data are hidden until they would.
+  - **The rest of the sidebar:** semantic HTML, with fieldsets, legends, and a real label for the opacity slider.
 
 #### Up next
 
-- A filter refactor: one list of filters builds the controls, as clearer, more accessible groups
 - Home page stats and more Census data, starting with a check of Honolulu's 3- and 4+-family coding
-- Semantic HTML and accessibility, as the remaining markup gets rebuilt
-- Replace Tachyons with plain CSS, as the remaining markup gets rebuilt
+- Semantic HTML and accessibility for the area panel
+- Replace the area panel's Tachyons with plain CSS

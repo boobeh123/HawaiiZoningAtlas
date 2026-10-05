@@ -187,11 +187,21 @@ const getUrlFilterParams = () =>
   new URLSearchParams(location.hash.split('/').slice(3).join('/'))
 
 /*
- * Returns the sidebar form's current state in the same format jQuery's
- * serialize() produced, so links shared before this change keep working
+ * Returns the sidebar's state as link pairs, in the format and order jQuery's
+ * serialize() produced, so links shared before keep working: the county, the
+ * housing filters (see getHousingPairs), the overlays, then the opacity
  */
-const getFormParams = () =>
-  new URLSearchParams(new FormData(document.querySelector('#form')))
+const getFormParams = () => {
+  const form = document.querySelector('#form')
+  const params = new URLSearchParams()
+  params.append('townActive', form.querySelector('input[name="townActive"]').value)
+  getHousingPairs().forEach(([name, value]) => params.append(name, value))
+  form.querySelectorAll('input[name="Overlay"]:checked').forEach((checkbox) => {
+    params.append('Overlay', checkbox.value)
+  })
+  params.append('opacity', form.querySelector('input[name="opacity"]').value)
+  return params
+}
 
 const updateUrl = () => {
   const mapLocationHash = location.hash.split('/').slice(0, 3).join('/')
@@ -203,6 +213,8 @@ const updateUrl = () => {
  * Loads the main GeoJSON data file
  */
 var loadZones = function (geojson) {
+  hideNoEffectOptions(geojson.features)
+
   // A county from the URL only counts if it has zoning data. Kalawao, for
   // example, has a county outline but no zones.
   const zoneTowns = new Set(
@@ -285,13 +297,6 @@ var loadZones = function (geojson) {
       return style(filters, feature)
     })
 
-    // Make sure groups of checkboxes where at least one is expected to be checked
-    // turns red if none are checked (and vice-versa)
-    $('.at-least-one-checked:has( input:checked )').removeClass('bg-light-red')
-    $('.at-least-one-checked:not(:has( input:checked ))').addClass(
-      'bg-light-red'
-    )
-
     calculateActiveArea()
 
     // Downloads an overlay's file the first time it's turned on
@@ -303,18 +308,6 @@ var loadZones = function (geojson) {
 
   document.querySelector('#resetFilters').addEventListener('click', clearFilters)
 
-  // When main checkbox in filters group is clicked, open up subgroup
-  $('.main-in-group').change(function () {
-    var subgroup = $(this).parent().siblings('.subgroup').first()
-    if (this.checked) {
-      subgroup.removeClass('dn')
-      subgroup.find('input.checked-by-default').prop('checked', true)
-    } else {
-      subgroup.find('input[type="checkbox"]').prop('checked', false)
-      subgroup.addClass('dn')
-    }
-  })
-
   calculateActiveArea()
 
   // If the link carried filters, rewrite it from what was actually restored,
@@ -324,14 +317,186 @@ var loadZones = function (geojson) {
   }
 }
 
+// The housing filters' controls, built from data/filters.json: for each type,
+// its config, its on/off checkbox, its options box, and its groups' inputs
+let housingControls = []
+
 /*
- * On page load, sets filters from the URL. Only values that match a real
- * input are used, and URL text is only ever compared, never turned into a
+ * Turns a housing type on or off. Either way its options go back to their
+ * defaults, the first choice of each group and no rules, as the old
+ * pre-checked boxes did.
+ */
+const setHousingTypeOn = (control, on) => {
+  control.toggle.checked = on
+  control.options.hidden = !on
+  control.groups.forEach(({ inputs }) => {
+    inputs.forEach((input, index) => {
+      input.checked = input.type === 'radio' && index === 0
+    })
+  })
+}
+
+/*
+ * Builds the housing filters from data/filters.json (see its "about"). Each
+ * type gets a checkbox that shows its options: a fieldset of radio buttons
+ * for each choice group, and of checkboxes for each rules group. It's all
+ * built as text, so the config can never inject HTML.
+ */
+const buildFilterControls = (config) => {
+  const list = document.querySelector('#housingTypeList')
+  housingControls = config.housingTypes.map((type) => {
+    const item = createTextElement('li', '', 'housingType')
+    const toggle = document.createElement('input')
+    toggle.type = 'checkbox'
+    const toggleLabel = createTextElement('label', '', 'typeToggle')
+    toggleLabel.append(toggle, ` ${type.label}`)
+    item.append(toggleLabel)
+    if (type.hint) {
+      item.append(createTextElement('p', type.hint, 'filterHint'))
+    }
+
+    const options = createTextElement('div', '', 'typeOptions')
+    const groups = type.groups.map((group, groupIndex) => {
+      const fieldset = createTextElement('fieldset', '', 'filterGroup')
+      fieldset.append(createTextElement('legend', group.legend))
+      const entries = group.type === 'choice' ? group.choices : group.options
+      const inputs = entries.map((entry) => {
+        const input = document.createElement('input')
+        if (group.type === 'choice') {
+          // One name per group makes its radios a single, arrow-key group
+          input.type = 'radio'
+          input.name = `${type.key}-${groupIndex}`
+        } else {
+          input.type = 'checkbox'
+        }
+        const label = createTextElement('label', '', 'filterOption')
+        label.append(input, ` ${entry.label}`)
+        fieldset.append(label)
+        return input
+      })
+      if (group.hint) {
+        fieldset.append(createTextElement('p', group.hint, 'filterHint'))
+      }
+      options.append(fieldset)
+      return { config: group, fieldset, inputs }
+    })
+    item.append(options)
+    list.append(item)
+
+    const control = { config: type, toggle, options, groups }
+    setHousingTypeOn(control, false)
+    toggle.addEventListener('change', () =>
+      setHousingTypeOn(control, toggle.checked)
+    )
+    return control
+  })
+}
+
+/*
+ * Returns the housing filters as [name, value] pairs, in the order links have
+ * always used. For each type that's on: `key=` (what the old group checkbox
+ * wrote), the chosen values of each choice group, then the checked rules.
+ */
+const getHousingPairs = () =>
+  housingControls
+    .filter(({ toggle }) => toggle.checked)
+    .flatMap(({ config, groups }) => [
+      [config.key, ''],
+      ...groups.flatMap(({ config: group, inputs }) => {
+        if (group.type === 'choice') {
+          const chosen = Math.max(
+            inputs.findIndex((input) => input.checked),
+            0
+          )
+          return group.choices[chosen].values.map((value) => [group.key, value])
+        }
+        return group.options
+          .filter((option, index) => inputs[index].checked)
+          .map((option) => [option.key, option.value])
+      }),
+    ])
+
+/*
+ * Sets the housing filters from a link's pairs. A type is on if the link has
+ * a pair for it. A choice group takes the choice whose values match the
+ * link's exactly, or else its default, so an unusual old mix, like only one
+ * lot-size range, opens as "Any size". Pairs that match nothing are ignored.
+ */
+const restoreHousingFilters = (params) => {
+  housingControls.forEach((control) => {
+    const isOn = params.has(control.config.key)
+    setHousingTypeOn(control, isOn)
+    if (!isOn) return
+
+    control.groups.forEach(({ config: group, inputs }) => {
+      if (group.type === 'choice') {
+        // The type's own key also carries the empty "on" marker
+        const linked = new Set(params.getAll(group.key).filter(Boolean))
+        const match = group.choices.findIndex(
+          (choice) =>
+            choice.values.length === linked.size &&
+            choice.values.every((value) => linked.has(value))
+        )
+        inputs[Math.max(match, 0)].checked = true
+      } else {
+        group.options.forEach((option, index) => {
+          inputs[index].checked = params
+            .getAll(option.key)
+            .includes(option.value)
+        })
+      }
+    })
+  })
+}
+
+/*
+ * Hides the options that can't change the map with today's data. A rule goes
+ * when every district that allows its type already has the rule's value, so
+ * checking it would gray out nothing. A choice group goes when those
+ * districts all share one value, and a fieldset when all its options have
+ * gone. Hidden options keep their state, so old links still work, and each
+ * comes back by itself once the spreadsheet starts telling districts apart.
+ */
+const hideNoEffectOptions = (features) => {
+  housingControls.forEach(({ config, groups }) => {
+    // The districts that allow the type: its own key has an allowed value
+    const allowedValues = new Set(
+      groups
+        .filter(({ config: group }) => group.key === config.key)
+        .flatMap(({ config: group }) =>
+          group.choices.flatMap((choice) => choice.values)
+        )
+    )
+    const allowing = features.filter((feature) =>
+      allowedValues.has(feature.properties[config.key])
+    )
+
+    groups.forEach(({ config: group, fieldset, inputs }) => {
+      if (group.type === 'choice') {
+        const values = new Set(
+          allowing.map((feature) => feature.properties[group.key])
+        )
+        fieldset.hidden = values.size <= 1
+        return
+      }
+      group.options.forEach((option, index) => {
+        inputs[index].parentElement.hidden = allowing.every(
+          (feature) => feature.properties[option.key] === option.value
+        )
+      })
+      fieldset.hidden = inputs.every((input) => input.parentElement.hidden)
+    })
+  })
+}
+
+/*
+ * On page load, sets the filters from the URL. Only values that match a real
+ * control are used, and URL text is only ever compared, never turned into a
  * selector.
  */
 const setFilters = () => {
   const form = document.querySelector('#form')
-  const checkboxes = [...form.querySelectorAll('input[type="checkbox"]')]
+  const overlayBoxes = [...form.querySelectorAll('input[name="Overlay"]')]
   const opacityInput = form.querySelector('input[name="opacity"]')
   const params = getUrlFilterParams()
 
@@ -352,55 +517,40 @@ const setFilters = () => {
     opacityInput.value = String(opacityFromUrl)
   }
 
-  // A link with filters describes the whole form, so start from every box
-  // unchecked. Otherwise a box that starts checked, like House or Senate,
+  // A link with filters describes the whole form, so start from every
+  // overlay off. Otherwise one that starts checked, like House or Senate,
   // could never be turned off by a link
   if (params.toString()) {
-    checkboxes.forEach((checkbox) => {
+    overlayBoxes.forEach((checkbox) => {
       checkbox.checked = false
     })
+    restoreHousingFilters(params)
   }
 
-  // Check each box whose name and value both match a pair in the URL
-  params.forEach((value, name) => {
-    const checkbox = checkboxes.find(
-      (input) => input.name === name && input.value === value
-    )
+  // Check each overlay the link names
+  params.getAll('Overlay').forEach((value) => {
+    const checkbox = overlayBoxes.find((input) => input.value === value)
     if (checkbox) {
       checkbox.checked = true
     }
   })
-
-  $('input.main-in-group:checked')
-    .parents()
-    .siblings('.subgroup')
-    .removeClass('dn')
-  $('.at-least-one-checked:has( input:checked )').removeClass('bg-light-red')
-  $('.at-least-one-checked:not(:has( input:checked ))').addClass('bg-light-red')
 
   updateResetButton()
   updateDrawerFilterCount()
 }
 
 /*
- * Constructs and returns a `filters` object based on the form in the sidebar
+ * Returns the housing filters as {name: [values]}, the shape
+ * satisfiesFilters() checks the districts against
  */
-var getFilters = function () {
-  var filters = {}
-
-  var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked')
-  for (var i = 0; i < checkboxes.length; i++) {
-    var name = checkboxes[i].name
-    var value = checkboxes[i].value
-
-    if (!name || !value) continue
-
-    if (!filters[name]) {
-      filters[name] = []
+const getFilters = () => {
+  const filters = {}
+  getHousingPairs().forEach(([name, value]) => {
+    // The empty "on" markers don't filter anything
+    if (value) {
+      filters[name] = [...(filters[name] || []), value]
     }
-    filters[name].push(value)
-  }
-
+  })
   return filters
 }
 
@@ -422,9 +572,9 @@ var satisfiesFilters = function (filters, feature) {
 /*
  * Adds zone type box colors to the legend
  */
-var addColorPolygonsToLegend = function () {
-  $('#legend .square').each(function () {
-    $(this).css('background-color', zone2color[$(this).attr('title')])
+const addColorPolygonsToLegend = () => {
+  document.querySelectorAll('#legend .square').forEach((square) => {
+    square.style.backgroundColor = zone2color[square.dataset.zone]
   })
 }
 
@@ -473,13 +623,10 @@ const drawCountyOutlines = () => {
 }
 
 /*
- * Counts the housing filter groups that are on. Overlay checkboxes don't
- * count, because they aren't filters.
+ * Counts the housing types that are on
  */
 const countHousingFilters = () =>
-  [...document.querySelectorAll('#form .main-in-group:checked')].filter(
-    (checkbox) => checkbox.name !== 'Overlay'
-  ).length
+  housingControls.filter(({ toggle }) => toggle.checked).length
 
 /*
  * Shows the Clear filters button while a housing filter is on or a county is
@@ -547,15 +694,7 @@ const setDrawerOpen = (open, { animate = true } = {}) => {
 const clearFilters = () => {
   const form = document.querySelector('#form')
 
-  form.querySelectorAll('.filter-group').forEach((group) => {
-    const mainCheckbox = group.querySelector('.main-in-group')
-    if (!mainCheckbox || mainCheckbox.name === 'Overlay') return
-
-    group.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-      checkbox.checked = false
-    })
-    group.querySelector('.subgroup')?.classList.add('dn')
-  })
+  housingControls.forEach((control) => setHousingTypeOn(control, false))
 
   // Clear the county everywhere: the map, the form, and so the URL too
   townActive = ''
@@ -680,6 +819,37 @@ const buildDemographicStats = (townDemographics) => {
  * and updates the message in the sidebar. Everything is set as text,
  * because `townActive` can come from the URL.
  */
+/*
+ * Closes the area panel by deselecting the district and its county, as
+ * clicking the selected district again does. The filters stay as they are.
+ */
+const closeAreaPanel = () => {
+  townActive = ''
+  districtActive = null
+  document.querySelector('#form input[name="townActive"]').value = ''
+  drawCountyOutlines()
+  updateResetButton()
+  calculateActiveArea()
+  updateUrl()
+}
+
+/*
+ * The ✕ in the area panel's top corner (see closeAreaPanel)
+ */
+const buildAreaCloseButton = () => {
+  // The icon font draws the word "close" as ✕
+  const button = createTextElement(
+    'button',
+    'close',
+    'areaCloseButton material-icons'
+  )
+  button.type = 'button'
+  button.title = 'Close'
+  button.setAttribute('aria-label', 'Close the county panel')
+  button.addEventListener('click', closeAreaPanel)
+  return button
+}
+
 const calculateActiveArea = () => {
   const calculator = document.querySelector('#activeAreaCalculator')
   const filters = getFilters()
@@ -729,7 +899,11 @@ const calculateActiveArea = () => {
     ` (${Math.trunc(totalAcres).toLocaleString()} acres) satisfies your filtering criteria.`
   )
   // The header only shows on phones
-  calculator.replaceChildren(buildAreaCardToggle(satisfiesPerc), summary)
+  calculator.replaceChildren(
+    buildAreaCloseButton(),
+    buildAreaCardToggle(satisfiesPerc),
+    summary
+  )
 
   // Stats exist only for the counties listed in data/demographics.js
   if (Object.hasOwn(demographics, townActive)) {
@@ -1290,7 +1464,7 @@ const rememberTourSeen = () => {
  * This function initializes the map. It should be called as soon as
  * DOM is loaded.
  */
-var initMap = function () {
+var initMap = async function () {
   // Zoom 9 fits the whole state on a desktop screen, but on a phone it shows
   // only the ocean between the islands. A link's own view still replaces
   // this (see L.Hash below).
@@ -1363,6 +1537,23 @@ var initMap = function () {
   // Phones: the filters drawer starts closed (its bar is wired up with the
   // tour, below)
   setDrawerOpen(false, { animate: false })
+
+  // The housing filters are built from their config before a link is
+  // restored into them, and before the tour points at them
+  try {
+    buildFilterControls(await fetchGeoJson('/data/filters.json'))
+  } catch (error) {
+    console.error(error)
+    document
+      .querySelector('#housingTypeList')
+      .replaceWith(
+        createTextElement(
+          'p',
+          "Couldn't load the housing filters. Check your connection and reload the page.",
+          'statusError'
+        )
+      )
+  }
 
   setFilters()
 
@@ -1442,6 +1633,13 @@ var initMap = function () {
     true
   )
 
+  // Phones: the tour step that's been cut to the drawer's height, if any
+  let clampedTourStep = null
+  const unclampTourStep = () => {
+    clampedTourStep?.classList.remove('tourStepClamp')
+    clampedTourStep = null
+  }
+
   // Phones: the tour opens the drawer, lower than usual, for the steps
   // inside it, and closes it for the map's own steps. The step's element
   // goes as low in the drawer as it fits, away from the popover pinned at
@@ -1452,13 +1650,21 @@ var initMap = function () {
     const content = document.querySelector('#HiZoningAtlas')
     const isInDrawer =
       matchMedia(phoneMediaQuery).matches && sidebar.contains(element.node)
+    unclampTourStep()
     sidebar.classList.toggle('drawerTour', isInDrawer)
     setDrawerOpen(isInDrawer, { animate: false })
     if (isInDrawer && element.node === content) {
       content.scrollTop = 0
     } else if (isInDrawer) {
       const drawerBox = content.getBoundingClientRect()
-      const stepBox = element.node.getBoundingClientRect()
+      let stepBox = element.node.getBoundingClientRect()
+      // A step taller than the drawer is cut to its height, so the
+      // highlight ends at the drawer's edge instead of running past it
+      if (stepBox.height > drawerBox.height) {
+        element.node.classList.add('tourStepClamp')
+        clampedTourStep = element.node
+        stepBox = element.node.getBoundingClientRect()
+      }
       content.scrollTop +=
         stepBox.height <= drawerBox.height
           ? stepBox.bottom - drawerBox.bottom
@@ -1513,6 +1719,9 @@ var initMap = function () {
   var driver = new Driver({
     animate: false,
     allowClose: false,
+    // Phones: the highlight hugs the element. Driver.js's default 10px of
+    // room around it would poke out of the drawer and past the screen's sides.
+    padding: matchMedia(phoneMediaQuery).matches ? 0 : 10,
     // Phones: keep the element where showTourStep put it. Driver.js's own
     // check can't tell it's already in view inside the drawer, and would
     // center it, which tucks the top of a tall step under the drawer's bar.
@@ -1530,6 +1739,7 @@ var initMap = function () {
       swallowNextClick = lastPressWasTouch
       // Phones: the map gets the screen back, and the drawer will next open
       // at its top
+      unclampTourStep()
       document.querySelector('#sidebar').classList.remove('drawerTour')
       setDrawerOpen(false, { animate: false })
       document.querySelector('#HiZoningAtlas').scrollTop = 0
@@ -1561,11 +1771,11 @@ var initMap = function () {
       },
     },
     {
-      element: '#PermittedResidentialUses',
+      element: '#HousingTypes',
       popover: {
-        title: 'Select Permitted Residential Uses',
-        description: `<p>Select one or more of the <strong>Permitted Residential Uses</strong> from ${filtersPlace}. The purple and pink hues on the map will show you what kind of zoning district the chosen residential use appears in.</p>\
-        <p>Explore the specific conditions under which your selected Permitted Residential Use is allowed, like <strong>minimum lot size</strong> requirements, <strong>public hearing</strong> requirements, or restrictions for <strong>elderly housing</strong>.</p>`,
+        title: 'Choose Housing Types',
+        description: `<p>Turn on one or more <strong>housing types</strong> in ${filtersPlace}. Districts that allow every type you turn on keep their color, and the rest turn gray.</p>\
+        <p>Each type you turn on has its own options: whether it can be built <strong>by right</strong> or only after a <strong>public hearing</strong>, and how big a <strong>lot</strong> it needs. Accessory dwelling units also have rules about who can live in them.</p>`,
         position: 'right',
       },
       onNext: function () {
@@ -1595,7 +1805,7 @@ var initMap = function () {
       popover: {
         title: 'Explore the Overlays',
         description:
-          'Toggle the checkbox to add or remove map overlays. The overlays include Waterways, Federally owned lands, State owned lands, Dept of Hawaiian Homelands owned lands, and Transit Stations (Rail). Hover over each option for more details.',
+          'Turn overlays on to see more on top of the zoning: waterways, federal and state lands, Hawaiian Home Lands, rail stations with a half-mile circle around each, and State House and Senate districts.',
         position: 'right',
       },
     },
@@ -1612,7 +1822,8 @@ var initMap = function () {
       element: '#ZoneOpacity',
       popover: {
         title: 'Adjust Zone Opacity',
-        description: 'Move the slider to adjust zoning layer transparency.',
+        description:
+          'Move the slider to make the zoning colors lighter or stronger, so the streets and places underneath show through.',
         position: 'top',
       },
     },

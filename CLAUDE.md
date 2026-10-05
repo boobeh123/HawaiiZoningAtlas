@@ -76,10 +76,10 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `scripts/` holds `map.js` and `analytics.js`. `analytics.js` sets up Google Analytics and skips it on localhost.
   - It also holds vendored plugins: leaflet-hash, Leaflet.pattern (`L.StripePattern` for the striped overlays), and jquery.unserialize, which nothing calls anymore.
   - `data/demographics.js` defines the global `demographics` and must load before `map.js`.
-- **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
+- **Tachyons.** Only the area panel still uses Tachyons classes, and `map.js` toggles its `dn` (display:none) to show and hide it. The sidebar is semantic HTML with `style.css` classes (the Map sidebar block), and `.visuallyHidden` is the screen-reader-only utility.
 - **Custom properties.** `style.css` defines its colors, fonts, font sizes, and spacing on `:root`, for example `--colorText`, `--fontHeading`, `--fontSizeBase`, `--spaceMd`, and `--edgeGap`. Use them instead of raw values.
   - **`em` sizes:** they stay relative on purpose.
-  - **Tachyons:** its classes in `map/index.html` still set most text colors and sizes.
+  - **Tachyons:** its classes on the area panel still set that panel's text colors and sizes.
 - **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
   - **Phones (600px and narrower):** the map fills the screen above a 48px bar (`--phoneMapHeight`). `#sidebar` is a drawer that sits just above the tab bar.
     - **Same breakpoint in JS:** `phoneMediaQuery` in `map.js`. `initMap()` uses it to start phones at zoom 6.
@@ -100,6 +100,8 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **The tour:** `showTourStep()` opens the drawer for steps inside `#sidebar` and closes it for the map's steps.
       - **Drawer height:** `.drawerTour` holds it at `--drawerTourShare` (0.45) of the screen above the tab bar, so the popovers keep room.
       - **Placement:** each step's element goes as low in the drawer as it fits.
+      - **The highlight:** Driver's `padding` is 0 on phones, so the highlight hugs the element instead of poking out of the drawer. A step taller than the drawer gets `.tourStepClamp`, which cuts it to the drawer's height for that step.
+      - **Popovers:** on drawer steps they're capped to the space above the drawer, and their footer is sticky, so the buttons always show. A teal inset ring on `#driver-highlighted-element-stage` outlines every highlight, on every screen.
       - **Stray taps:** Driver.js changes steps on `touchstart`, so the tap's own click would land on whatever the new step put under the finger. After a touch step change, `swallowNextClick` eats that one click.
       - **The bar:** it does nothing while the tour runs.
   - **601–1139px:** the area panel moves beside the sidebar. A centered panel would overlap it.
@@ -117,13 +119,20 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **`permanent: true`:** these labels need it, or Leaflet closes them on any map click.
     - **Hiding:** hidden labels use `visibility: hidden`, not `display: none`. Leaflet centers tooltips using their size, and a `display: none` label has no size, so it drifts off its spot.
 - **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()`, `buildDistrictDetails()`, and `calculateActiveArea()` do. Never build it from HTML strings. Some Special Notes contain `<`.
-- **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `map/index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
-- **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
-- **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`. They also carry the `main-in-group` class, so check `name !== 'Overlay'` whenever code means "housing filters".
-- **Clear filters.** The ✕ (`#resetFilters`) is a `<button>`.
-  - **`clearFilters()`:** unchecks every housing filter group and clears the county from the map, the form, and the URL. Then it dispatches one `change` on the form, so the usual update runs. Overlays and opacity stay as they are.
+- **Filter contract.** The housing filters live in `data/filters.json` (its `about` explains the format).
+  - **Types and groups:** each housing type has a `key` and `groups`. A `choice` group is radio buttons, and its first choice is the default. A `rules` group is checkboxes.
+  - **Keys and values:** every key is a property in `final.geojson`, and every value is one answer it can have (`1MLS` / `B`). A choice stands for a list of values: "Either way" is `["A", "AH"]`, and "Under ½ acre" is `["A", "B"]`.
+  - **Building:** `initMap()` fetches the config, then `buildFilterControls()` builds the controls into `#housingTypeList` as text, and keeps them in `housingControls`.
+  - **The translation layer:** `getHousingPairs()` turns the controls into the old link pairs, in the old order. For each type that's on: `key=` (the old group checkbox's marker), each choice's values, then the checked rules. `getFilters()` builds `{name: [values]}` from them, and `restoreHousingFilters()` reads a link back. A choice group takes the choice whose values match the link's exactly, or its default.
+  - **Matching:** `satisfiesFilters()` requires `feature.properties[name]` to be in each list. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying".
+  - **Changing a filter:** touch `data/filters.json`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together. `check_data.py` fails if a config value matches no district.
+  - **Options that change nothing:** `hideNoEffectOptions()` runs as the zones load. It hides a rule when every district that allows its type already has the rule's value. It hides a choice group when those districts all share one value, and a fieldset when all its options are hidden. Hidden controls keep their state, so old links keep their pairs. Today that hides minimum home size and elderly-only for every type, and the ADUs' "How it's allowed".
+- **Housing types.** A type's checkbox shows its `.typeOptions`. `setHousingTypeOn()` resets the options to their defaults either way, like the old pre-checked boxes.
+- **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`. They aren't housing filters, so `getFilters()` never sees them.
+- **Clear filters.** The "✕ Clear" button (`#resetFilters`).
+  - **`clearFilters()`:** turns every housing type off and clears the county from the map, the form, and the URL. Then it dispatches one `change` on the form, so the usual update runs. Overlays and opacity stay as they are.
   - **`updateResetButton()`:** shows the ✕ only while a housing filter or a county is active.
-  - **Hiding:** it hides the ✕ with the `hidden` attribute, not Tachyons `dn`. Google's `.material-icons` sets `display: inline-block` and loads later, so it beats `dn`. `#resetFilters[hidden]` in `style.css` wins by ID.
+  - **Hiding:** it hides the button with the `hidden` attribute. `.clearButton` sets `display: inline-flex`, which would beat it, so `#resetFilters[hidden]` in `style.css` wins by ID.
 - **Property keys.**
   - `T`: county.
   - `Z`: full district name.
@@ -138,6 +147,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **County selection.** Clicking a zone selects it (`districtActive`) and its county (`townActive`).
   - **Panel:** `buildDistrictDetails()` adds the district's name, flags, and full note to the area panel.
   - **Clicking:** another district in the same county switches the panel without moving the map. Clicking the same district again clears both.
+  - **Closing:** the panel's ✕ (`buildAreaCloseButton()`) calls `closeAreaPanel()`, which deselects the district and county the same way. The filters stay. The panel reserves room on its right for the ✕: 40px, or 48px on phones, where the ✕ is a 44px target.
   - **Zoom:** `showCounty()` handles a newly selected county. A click only zooms in, on every screen. From a wider view it fits the county, and from closer in the map stays where it is.
   - **Outline:** `drawCountyOutlines()` restyles the outlines. The selected county gets 5px cyan (`#00e5ff`, used by no other layer) and goes on top, and the rest get 2px faint white.
   - **Pane:** the outlines live in the `countyOutlines` pane (z-index 502), just above the `overlays` pane (501) that holds the House and Senate lines.
@@ -146,9 +156,9 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - a key in `demographics` (`Hawaii`, `Honolulu`, `Kauai`, `Maui`, no ʻokina), for the stats row. Without a match, the panel leaves the stats out.
 - **URL state.** The hash is `#zoom/lat/lng/<serialized form>`.
   - `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment. Don't replace it with the upstream library.
-  - `updateUrl()` writes the filter part with `getFormParams()`, which is `URLSearchParams` over `FormData`. That's the same format jQuery's `serialize()` produced.
-  - `setFilters()` reads it with `getUrlFilterParams()` and only restores values that match a real input.
-  - **A link defines the whole form:** when a link has a filter part, `setFilters()` unchecks every box first. Boxes checked in `map/index.html` (House and Senate) only apply when there's no link. Otherwise a link couldn't turn them off.
+  - `updateUrl()` writes the filter part with `getFormParams()`: `townActive`, the housing pairs, the checked overlays, then `opacity`. That's the same format and order jQuery's `serialize()` produced.
+  - `setFilters()` reads it with `getUrlFilterParams()`, and only restores values that match a real control.
+  - **A link defines the whole form:** when a link has a filter part, `setFilters()` turns every overlay and housing type off first. Boxes checked in `map/index.html` (House and Senate) only apply when there's no link. Otherwise a link couldn't turn them off.
   - `loadZones()` drops a `townActive` that has no zoning data, and rewrites any link that carried junk.
   - Never build selectors from URL text. The bad-link regression list is in `Verify.md`.
 
@@ -158,7 +168,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
    - **Pull:** `pull_sheet.py` downloads the four tabs through Google's public CSV export and writes `data-pipeline/hawaii-zoning-data.csv`, the notebook's input.
    - **Corrections on the way in:** it changes the sheet's "Kauaʻi" to "Kauai", fills in Maui `P`'s blank State, Jurisdiction, and County, and fixes the `OD/PD` typo.
    - **Format:** it takes both header rows from Maui's tab and refuses to run if any tab's column names differ. With an unchanged sheet, its output is byte-identical to the committed CSV.
-   - **Checks:** `validation.py` checks the CSV. If it changed, the workflow runs the notebook, and `check_data.py` checks the result: all four counties, no county losing over a fifth of its districts, every checkbox still matching, and flag formats.
+   - **Checks:** `validation.py` checks the CSV. If it changed, the workflow runs the notebook, and `check_data.py` checks the result: all four counties, no county losing over a fifth of its districts, every filter option in `data/filters.json` still matching, and flag formats.
    - **Push:** after the checks, `github-actions[bot]` commits with `pull_sheet.py`'s summary of changed cells and pushes to `main`, which deploys. A failure pushes nothing, and GitHub emails the owner.
    - **Old copy:** `data/hawaii-zoning-data.csv` is from the old sync. Nothing writes or reads it now.
    - **Inactivity:** GitHub pauses scheduled workflows after 60 days without repo activity. Re-enable it from the Actions tab.
@@ -175,7 +185,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 5. **Acreage.** Areas are computed in EPSG:6933. Federal/state land (`federal-state-dissolve.geojson`) is subtracted to get `MunicipalAcres`, which becomes `MA`.
 6. **Output.**
    - **Shortened names and values:** `cols_xwalk` renames the columns and `vals_xwalk` shortens the values (`Allowed/Conditional`→`A`, `Public Hearing`→`AH`, `Primarily Residential`→`R`, …). Any `cols_xwalk` column the CSV lacks is silently dropped, which is how the ADU filters once broke.
-   - **Flag formats:** the save cell writes the true/false flags as the text the checkboxes send. The minimum unit size flags (`1MUS`…`4MUS`, `MUS`) become `'1'`/`'0'`, and `ASize` becomes `'Yes'`/`'No'`. Without that, pyogrio writes `'True'`/`'False'`, which breaks those filters and the tooltip's minimum-size line.
+   - **Flag formats:** the save cell writes the true/false flags as the text the filters send. The minimum unit size flags (`1MUS`…`4MUS`, `MUS`) become `'1'`/`'0'`, and `ASize` becomes `'Yes'`/`'No'`. Without that, pyogrio writes `'True'`/`'False'`, which breaks those filters and the tooltip's minimum-size line.
    - **Smaller file:** the save cell snaps every point to a 0.00001° grid (about 1 m) with `set_precision`. Then `shrink_geojson.py` writes the file with 5 decimal places and no spaces, which halves it. Plain rounding would leave some districts invalid (crossing edges, collapsed slivers): Leaflet still draws them, but GIS tools reject them. The notebook imports the script from `HOME_DIRECTORY`, so it has to stay in `data-pipeline/`.
    - **Two copies:** the notebook writes `data-pipeline/final.geojson`, but the site reads `data/final.geojson`, so copy the file across by hand. The two should be identical. The action doesn't commit anything.
    - **CSV location:** `final.csv` is written to the working directory, not `HOME_DIRECTORY`.
