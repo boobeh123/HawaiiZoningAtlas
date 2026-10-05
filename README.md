@@ -162,7 +162,7 @@ Our research team read the complete zoning codes of all four counties and record
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
 * County area calculator: click a district to see how many acres, and what share of its county's zoned land, meet your filters
 * A Clear filters button that resets the housing filters and the selected county, and leaves your overlays on
-* County stats from the Census Bureau's 2020–2024 American Community Survey: median household income, Native Hawaiian residents, and cost-burdened households
+* County stats from the Census Bureau's 2020–2024 American Community Survey: median household income, Native Hawaiian residents, and cost-burdened households. They appear in the map's district panel, and side by side in a table on the Home page
 * Overlays for waterways, federal lands, state lands, Hawaiian Home Lands (DHHL), rail stations with half-mile circles, and State House and Senate districts
 * House and Senate district labels that appear as you zoom in and never overlap
 * Overlays that download only when they're first turned on, with loading and error messages
@@ -278,6 +278,7 @@ It finds each value by its label, because the Census Bureau renumbers variables 
   - **Weight:** it downloads about 0.1 MB, where landing on the map used to download all of the map data.
   - **The map's new home:** it moved to `/map/`, and old shared links forward there.
   - **Navbar:** a Home · Map tab bar links the two pages. On phones it sits under the filters drawer.
+- **Census on Home:** a table puts the four counties' Census figures side by side. It's built from the same data file the map uses, so the two can't drift apart.
 
 #### Up next
 
