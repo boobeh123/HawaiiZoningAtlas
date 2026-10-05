@@ -6,7 +6,37 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Feature 11, step 1: Custom properties for `style.css`, and fixed zone colors (built, not committed yet)
+## Your feedback from the iPhone SE pass (2026-10-04; the zoom change is built, not committed yet)
+
+- [x] **Desktop click zoom:** approved in chat. It's one rule everywhere now: a click zooms in to the county when you're zoomed out farther than the county, and never zooms out.
+- [x] **Default opacity:** decided in chat: it stays at 90%. The zone colors pass the palette checks only at 90%.
+  - **At 35%:** the closest pair would fall to 7.3, against a floor of 15, and to 3.6 with colorblindness, against a target of 8.
+  - **The gray:** the "doesn't allow it" gray would all but disappear (1.14:1 on the basemap), and that's the main thing the map shows.
+- [x] **Default basemap:** decided in chat: Map stays the default, with Satellite one tap away.
+  - **Performance wasn't the problem.** Tiles cost 0.1 to 0.7 MB per view either way, and each view settles in about a second.
+  - **Readability was.** At 90%, the zones hide the photo, and at 35% they're hard to read over it.
+
+**What changed for the zoom:**
+- [scripts/map.js](scripts/map.js): `showCounty()` drops its phones-only check, so desktop follows the phone rule.
+- **Docs:** CLAUDE.md and the README.
+
+**Claude's checks** (headless Edge, `main` vs. the new code; all passed, no errors):
+
+| Case | Before | Now |
+|---|---|---|
+| Desktop at zoom 13, click a district | zoomed out to 11 to fit Oʻahu | stays at 13, same spot |
+| Desktop statewide (zoom 8), click Maui | zooms in to fit Maui (10) | the same |
+| Desktop at 13, then click a second Honolulu district | stuck at 11 after the first zoom-out | stays at 13, and the panel switches districts |
+| Desktop at 13, click the same district twice | stuck at 11 | stays at 13, and the second click clears the selection |
+| Phone at 13 or at 7 | only zooms in | the same |
+
+**Your checks** (on desktop):
+- [ ] Open http://localhost:8000/#13/21.33752/-157.86051 and click the district in the middle. The panel opens, and the map stays where it is: the URL still starts with `#13/`. Before, it zoomed out to fit all of Oʻahu, so you lost your place.
+- [ ] Zoom out until you see every island, and click Maui. The map zooms in to fit Maui. From far out, a click still takes you to the county you picked.
+
+---
+
+## Feature 11, step 1: Custom properties for `style.css`, and fixed zone colors (built and committed)
 
 - [x] Plan approved in chat (2026-10-04), with zone colors **C**.
 
@@ -57,10 +87,10 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 - **Missed:** the tablet "clicked" state repeated the fresh one, because the test's click landed on the sidebar. The panel's tablet position still compared equal, because computed styles cover hidden elements too.
 
 **Your checks:**
-- [ ] Run the site locally. The map looks as it did, except for two things: Mixed with Residential districts are deep purple, and Nonresidential ones are a soft orchid. The legend's squares match.
-- [ ] Open http://localhost:8000/#14/21.2905/-157.8330 (Waikīkī and Ala Moana). Waikīkī, Ala Moana, and Kakaʻako are deep purple Mixed districts, and they stand out from the magenta Primarily Residential neighborhoods inland.
-- [ ] Turn on **2-Family Housing** and zoom out to Oʻahu. Districts that don't allow it turn gray, which reads clearly differently from the orchid Nonresidential districts that do.
-- [ ] Everything else looks exactly as before: the sidebar, tooltips, the House and Senate labels, and the drawer and card on iPhone SE.
+- [X] Run the site locally. The map looks as it did, except for two things: Mixed with Residential districts are deep purple, and Nonresidential ones are a soft orchid. The legend's squares match.
+- [X] Open http://localhost:8000/#14/21.2905/-157.8330 (Waikīkī and Ala Moana). Waikīkī, Ala Moana, and Kakaʻako are deep purple Mixed districts, and they stand out from the magenta Primarily Residential neighborhoods inland.
+- [X] Turn on **2-Family Housing** and zoom out to Oʻahu. Districts that don't allow it turn gray, which reads clearly differently from the orchid Nonresidential districts that do.
+- [X] Everything else looks exactly as before: the sidebar, tooltips, the House and Senate labels, and the drawer and card on iPhone SE.
 
 **Found while checking, for a later step:** the overlay colors fail the same validator.
 - **Selection vs. waterways:** the selected county's cyan outline and the waterways' light blue look almost identical with protanopia (ΔE 0.8).
@@ -81,22 +111,27 @@ These ideas came from our chat on 2026-10-04 and were only in chat until now. Th
    - **Pages:** Home at `/` and the map at `/map/`. Home forwards old links (`/#zoom/lat/lng…`) to `/map/`, so every link already shared keeps working.
    - **Navbar:** a bottom tab bar on phones (Home · Map) and the top navigation on desktop. On the map page, the drawer's bar sits just above the tab bar, the way Wea Da Bus's refresh bar sits above its tab bar.
    - **Home, to start:** the key zoning info from the sidebar's intro: what the atlas shows, how to read it, and its sources and credits.
+     - **Takeaways:** a "what to take away" section, with worked examples like the Maui one under item 3. You said you weren't sure what to look for on the map, and visitors won't be either.
+   - **Tour:** Home explains what the atlas means, so the tour can stick to how to use the map.
    - **Standards:** the new markup and CSS follow yours (semantic HTML, custom properties, no Tachyons), which starts Features 10 and 11 for those parts.
 2. **A filter refactor.**
    - **One config** lists every filter, and the code builds the controls from it, which was Feature 14's idea. Adding a filter becomes one entry in a list instead of hand-written HTML.
    - **Markup:** `<fieldset>` and `<legend>` groups, and clearer controls than checkboxes that reveal more checkboxes.
    - **Links:** the same names and values in the URL, so shared links keep working. `check_data.py` reads the config instead of `index.html`.
    - **Where:** it fills both the desktop sidebar and the phone drawer.
+   - **Tour:** its steps get rewritten for the new controls. Only its phone behavior has changed so far: it opens the drawer. Its text still describes the old sidebar.
 3. **Home stats and more Census data.**
    - **Stats:** the pipeline writes a small `data/stats.json`, so Home never downloads the 12.6 MB map file. The weekly sync keeps it current.
    - **Census:** more tables from `tools/fetchDemographics.js`, which you run, since the key stays on your machine. For example, housing units by number of units per building would show what's built next to what zoning allows.
    - **Charts:** plain HTML and CSS, each with a table under it, so no new library.
-   - [ ] **Before any chart:** check Honolulu's 3- and 4+-family coding against the master sheet. Its Agricultural districts and R-5 through R-10 are coded as allowing them as of right, which puts 4+-family homes on 61% of Honolulu's zoned land, the same share as 1-family.
+   - [ ] **Before any chart:** check Honolulu's 3- and 4+-family coding against the master sheet. Its Agricultural districts and R-5 through R-10 are coded as allowing them as of right.
+     - **The effect:** 1-family, 2-family, and 4+-family housing each light up 61% of Honolulu's zoned land, so the map looks almost the same whichever one you pick.
+     - **The contrast:** Maui shows the story the atlas is meant to tell. 1-family homes are allowed on 35% of its zoned land, and 4+-family homes on 1%.
 
 **Recommended order: 1, 2, 3.**
 - **The navbar and pages come first:** they're the frame the other two live in.
 - **The filter refactor comes second:** its config becomes the one list of housing types, approval levels, and lot-size ranges, and the stats page reuses it for its labels.
-- **The Honolulu check can happen anytime before item 3,** while items 1 and 2 are built.
+- **The Honolulu check should happen soon.** It's needed before item 3, but it also affects the map today: it's why Oʻahu doesn't seem to tell a story yet.
 
 **What happened to Features 10 and 11:** nothing yet, and neither is dropped. After Feature 9, the next plan written here was Feature 12, because you'd asked about the phone layout, so that's the one the cloud session picked up.
 - **Feature 11** (plain CSS on custom properties) starts now, with the step above.
@@ -224,12 +259,12 @@ Nothing selected            District tapped             Drawer open
 - [x] Decided in chat (2026-10-04): custom properties now, as Feature 11's first step (see the plan at the top).
 
 **Your checks.** In Edge or Chrome, open DevTools (F12) and turn on the device toolbar (Ctrl+Shift+M) with **iPhone SE**:
-- [ ] Reload. The map fills the screen above a bar that says "Filters & overlays". The Map/Satellite switch and the credits sit just above the bar.
-- [ ] Tap the bar. The drawer opens to about two-thirds of the screen, and the map slides up so the islands show in the strip above it. Turn on **1-Family Housing**: the bar says "1 filter on", and the islands above change color. Tap the bar again: the drawer closes and the map slides back.
-- [ ] Tap a district on Oʻahu. A short card at the top shows the county's percentage, the district's name, and one line of its note. Tap the card's top row. It expands to the full sentence, the three stats, and the whole note. Tap it again, and it shrinks.
-- [ ] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. On step 2, scroll inside the popover to reach Next. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
-- [ ] Turn off the device toolbar. The desktop layout looks the same as before.
-- [ ] Try it on your own phone on the live site.
+- [X] Reload. The map fills the screen above a bar that says "Filters & overlays". The Map/Satellite switch and the credits sit just above the bar.
+- [X] Tap the bar. The drawer opens to about two-thirds of the screen, and the map slides up so the islands show in the strip above it. Turn on **1-Family Housing**: the bar says "1 filter on", and the islands above change color. Tap the bar again: the drawer closes and the map slides back.
+- [X] Tap a district on Oʻahu. A short card at the top shows the county's percentage, the district's name, and one line of its note. Tap the card's top row. It expands to the full sentence, the three stats, and the whole note. Tap it again, and it shrinks.
+- [X] In the console, run `localStorage.removeItem('hzaTourSeen')` and reload. Step through the tour. On step 2, scroll inside the popover to reach Next. The drawer opens for the sidebar steps, closes for the map and Map/Satellite steps, and closes at the end. Nothing gets selected by your taps on Next or Done.
+- [X] Turn off the device toolbar. The desktop layout looks the same as before.
+- [X] Try it on your own phone on the live site.
 
 **Found along the way, not changed:**
 - **`index.html`'s `<div id="Overlays">` is never closed.** So the browser puts Zone Opacity and the credits inside it, and the tour's Overlays step highlights them too.
