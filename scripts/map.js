@@ -762,8 +762,8 @@ const fetchGeoJson = async (path) => {
  */
 const loadTransit = async () => {
   const [stations, railLine] = await Promise.all([
-    fetchGeoJson('./data/rail-transit.geojson'),
-    fetchGeoJson('./data/rail-transit-line.geojson'),
+    fetchGeoJson('/data/rail-transit.geojson'),
+    fetchGeoJson('/data/rail-transit-line.geojson'),
   ])
 
   const transitMarkers = stations.features.map(function (o) {
@@ -804,7 +804,7 @@ const loadTransit = async () => {
 
 //* returns a layer of hydrology features
 const loadHydro = async () => {
-  const geojson = await fetchGeoJson('./data/hydro.min.geojson')
+  const geojson = await fetchGeoJson('/data/hydro.min.geojson')
   const stripes = new L.StripePattern({
     height: 2,
     width: 2,
@@ -986,7 +986,7 @@ const buildDistrictOverlay = (lines, getLabelText, className) => {
  * Returns the House district lines with a "House 23"-style label on each
  */
 const loadHouse = async () => {
-  const geojson = await fetchGeoJson('./data/house-districts.min.geojson')
+  const geojson = await fetchGeoJson('/data/house-districts.min.geojson')
   const lines = L.geoJSON(geojson, {
     interactive: false,
     stroke: true,
@@ -1008,7 +1008,7 @@ const loadHouse = async () => {
  * Returns the Senate district lines with a "Senate 12"-style label on each
  */
 const loadSenate = async () => {
-  const geojson = await fetchGeoJson('./data/senate-districts.min.geojson')
+  const geojson = await fetchGeoJson('/data/senate-districts.min.geojson')
   const lines = L.geoJSON(geojson, {
     interactive: false,
     stroke: true,
@@ -1028,7 +1028,7 @@ const loadSenate = async () => {
 
 // todo: add sewerlines overlay (oahu is done - need to do neighbor islands)
 var loadSewer = function () {
-  $.getJSON('./data/sewer.min.geojson', function (geojson) {
+  $.getJSON('/data/sewer.min.geojson', function (geojson) {
     var stripes = new L.StripePattern({
       height: 2,
       width: 2,
@@ -1053,7 +1053,7 @@ var loadSewer = function () {
 
 //* returns the federal land overlay
 const loadFederal = async () => {
-  const geojson = await fetchGeoJson('./data/federal-land.min.geojson')
+  const geojson = await fetchGeoJson('/data/federal-land.min.geojson')
   const stripes = new L.StripePattern({
     height: 2,
     width: 2,
@@ -1078,7 +1078,7 @@ const loadFederal = async () => {
 
 //* returns the state land overlay
 const loadState = async () => {
-  const geojson = await fetchGeoJson('./data/state-land.min.geojson')
+  const geojson = await fetchGeoJson('/data/state-land.min.geojson')
   const stripes = new L.StripePattern({
     height: 2,
     width: 2,
@@ -1106,7 +1106,7 @@ const loadState = async () => {
 
 
 const loadDHHL = async () => {
-  const geojson = await fetchGeoJson('./data/dhhl-land.geojson')
+  const geojson = await fetchGeoJson('/data/dhhl-land.geojson')
   const stripes = new L.StripePattern({
     height: 2,
     width: 2,
@@ -1251,8 +1251,8 @@ const loadMapData = async () => {
   const status = document.querySelector('#mapStatus')
   try {
     const [counties, zones] = await Promise.all([
-      fetchGeoJson('./data/counties.geojson'),
-      fetchGeoJson('./data/final.geojson'),
+      fetchGeoJson('/data/counties.geojson'),
+      fetchGeoJson('/data/final.geojson'),
     ])
     loadTowns(counties)
     loadZones(zones)
@@ -1474,13 +1474,17 @@ var initMap = function () {
   document.querySelector('#drawerToggle').addEventListener('click', () => {
     if (driver?.isActivated) return
     const open = !drawerOpen
-    // --drawerOpenHeight is in dvh, hundredths of the screen's height
-    const openHeightDvh = parseFloat(
+    // The open drawer takes this share of the screen above the tab bar (see
+    // --drawerOpenShare in style.css), and the strip of map above it gets the rest
+    const openShare = parseFloat(
       getComputedStyle(document.documentElement).getPropertyValue(
-        '--drawerOpenHeight'
+        '--drawerOpenShare'
       )
     )
-    const stripHeight = innerHeight * (1 - openHeightDvh / 100)
+    const tabBarHeight = document
+      .querySelector('.tabBar')
+      .getBoundingClientRect().height
+    const stripHeight = (innerHeight - tabBarHeight) * (1 - openShare)
     // Moves the middle of the whole map to the middle of the strip
     const shift = (map.getSize().y - stripHeight) / 2
     setDrawerOpen(open)
@@ -1538,8 +1542,9 @@ var initMap = function () {
       element: '#HiZoningAtlas',
       popover: {
         title: 'Hawaii Zoning Atlas',
+        // What zoning is and how to read the map is on the Home page now
         description:
-          "Zoning is the most important local law you've never heard of. Zoning defines where buildings can go, how large they can be, what they can be used for, and more. The current zoning laws prioritize single-family homes on large lots in much of the state, contributing to urban sprawl, traffic congestion, and rising housing costs. Our team read the complete zoning codes for all 4 counties and built this interactive map to show where housing can and can't be built across the state. We hope policymakers and housing advocates can use our data to make housing more affordable and equitable.",
+          "This map shows where Hawaiʻi's zoning allows each kind of housing, district by district, across all four counties. This short tour shows you how to use it. The <strong>Home</strong> tab explains what zoning is and how to read the map.",
         position: 'right',
       },
     },
