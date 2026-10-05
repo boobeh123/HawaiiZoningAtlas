@@ -149,13 +149,12 @@ const syncZoneTooltips = () => {
 }
 
 /*
- * Brings a newly selected county into view. Desktop fits the whole county.
- * Phones only zoom in, never out: fitting a county on a small screen zooms
- * far out from wherever you tapped.
+ * Brings a newly selected county into view. A click only ever zooms in: from
+ * a wider view the map fits the county, and from closer in it stays where it
+ * is. Fitting the whole county would zoom far out from wherever you clicked.
  */
 const showCounty = (bounds) => {
-  const isPhone = matchMedia(phoneMediaQuery).matches
-  if (isPhone && map.getBoundsZoom(bounds) <= map.getZoom()) {
+  if (map.getBoundsZoom(bounds) <= map.getZoom()) {
     return
   }
   map.fitBounds(bounds)
