@@ -6,7 +6,217 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Your feedback from the iPhone SE pass (2026-10-04; the zoom change is built, not committed yet)
+## Census data on Home (planned, waiting for your approval)
+
+- [ ] Approve this plan in chat.
+
+**Now, from data the site already has:** a "The four counties at a glance" table on Home. It comes from `data/demographics.js`, the file the map's area panel already uses (under 1 KB). These are today's numbers:
+
+| County | Median household income | Households spending 30%+ of income on housing | Native Hawaiian residents |
+|---|---|---|---|
+| Hawaiʻi | $78,639 | 33.2% | 9.0% |
+| Honolulu | $106,195 | 41.5% | 5.1% |
+| Kauaʻi | $97,668 | 37.3% | 7.7% |
+| Maui | $97,161 | 39.5% | 7.9% |
+
+- **Where:** a new section right after "How to read the map". It's the same three numbers the map's panel shows, side by side.
+- **How:**
+  - **Data:** `index.html` loads `/data/demographics.js`.
+  - **Script:** a small, deferred `scripts/countyStats.js` builds the table with DOM methods. There's one data file, so a rerun of `tools/fetchDemographics.js` updates the map and Home together.
+  - **Markup:** a real `<table>` with a caption, column headers, and county names as row headers. The source line comes from the file: "2020–2024 ACS 5-year estimates".
+  - **Without JavaScript:** a sentence says the figures need it.
+- **Phones:** the table fits a 375 px screen, or scrolls sideways inside its own box, never the page.
+- **Later, with item 3:** new Census tables, like housing units by the number of units per building, or rent and home values. Those need `tools/fetchDemographics.js` extended and then run with your key.
+
+**How Claude will check it:**
+- **Accuracy:** the table matches `data/demographics.js` exactly.
+- **Structure:** the caption and headers are read correctly as a table.
+- **Phones:** nothing overflows on an iPhone SE.
+- **Errors:** none.
+
+---
+
+## Roadmap item 1: A navbar and two pages (built, not committed yet)
+
+- [x] Plan approved in chat (2026-10-04), with the four decisions at the end and Home's wording as drafted.
+
+**The goal:** Home, at `/`, explains what the atlas shows and how to read it. The map moves to `/map/`. A navbar links the two: Home · Map.
+
+```
+Phone: Home                 Phone: Map                  Desktop: Map
+┌──────────────────────┐    ┌──────────────────────┐    ┌───────────────────────────────────┐
+│ Hawaii Zoning Atlas  │    │                  [+] │    │ Hawaii Zoning Atlas     Home  Map │
+├──────────────────────┤    │                  [−] │    ├─────────────┬─────────────────────┤
+│ Where can you build  │    │    full-screen map   │    │ sidebar     │                     │
+│ homes in Hawaiʻi?    │    │                      │    │ (filters,   │        map          │
+│ [ Open the map ]     │    │            [Map/Sat] │    │  overlays)  │                     │
+│ How to read the map  │    ├──────────────────────┤    │             │                     │
+│ Try it: Maui …       │    │ ▴ Filters & overlays │    │             │                     │
+├──────────────────────┤    ├──────────────────────┤    │             │                     │
+│    Home      Map     │    │    Home      Map     │    │             │                     │
+└──────────────────────┘    └──────────────────────┘    └─────────────┴─────────────────────┘
+```
+
+**The navbar.** It copies Wea Da Bus's tab bar, at this site's own 600px breakpoint:
+- **Phones:** fixed along the bottom, 3.75rem tall plus the safe area. Each tab is an icon above its label.
+  - **The current tab:** it gets a 3px bar on top as well as color, so it doesn't rely on color alone.
+  - **The map's controls:** the bar sits above them (Leaflet's controls sit at z-index 1000).
+- **Wider screens:** it becomes the top bar, with the brand on the left and the tabs on the right. The current tab gets a 3px bar underneath.
+- **Markup:** `<nav aria-label="Main">` with real links, and `aria-current="page"` on the current tab.
+- **Icons:** inline SVGs (a house and a map), with `aria-hidden`.
+
+**Home** (`index.html`, rewritten):
+- **Plain page:** semantic HTML and `style.css` only. No Tachyons, jQuery, Leaflet, or 3 MB of map data, so first-time visitors land on a fast page.
+- **Hero:** "Where can you build homes in Hawaiʻi?", what the atlas is, and an **Open the map** link. The words come from today's sidebar intro and the tour's first step.
+- **How to read the map:**
+  - **The colors:** the three zone types, with their swatches.
+  - **Filters:** colored means a district allows the housing you picked, and gray means it doesn't.
+  - **The area panel:** the share of the county's zoned land.
+  - **Overlays:** a line on what each one is.
+- **What to take away:** "Try it" links that open the map already set up.
+  - **Example:** "Where Maui allows apartment buildings" opens `/map/` zoomed to Maui, with 4+-Family Housing on.
+  - **No hard-coded numbers:** the map shows the live data, so nothing goes stale. Numbers come with item 3's stats.
+  - **No Honolulu examples yet:** they wait for the Honolulu data check.
+- **Sources and credits:** the National Zoning Atlas method, the county maps, the research spreadsheet, the Census data, and the partners and GitHub links from today's sidebar.
+- **Old links:** a small `scripts/home.js` forwards any link with a map view (`/#zoom/lat/lng…`) to `/map/` with the same hash. So every link people have shared keeps working.
+
+**The map page** (`map/index.html`, today's `index.html` moved):
+- **Paths:** asset paths become root-relative (`/style.css`, `/data/…`), including the `./data/…` paths in `map.js`.
+  - **Where that works:** Netlify and `python -m http.server`, both of which serve the repo root.
+  - **Where it wouldn't:** hosting from a subfolder, which this site doesn't do.
+- **Phones:** the drawer's bar sits just above the tab bar, the way Wea Da Bus's refresh bar does.
+  - **Map height:** the map ends at the drawer's bar: 559px of an iPhone SE's 667, up from 367 before Feature 12.
+  - **Open drawer:** it takes 70% of the space above the tab bar.
+  - **The pan:** it measures the open drawer instead of parsing the CSS variable, so the islands still land in the strip.
+- **Desktop:** the map, sidebar, area panel, and status line all start below the top bar.
+- **Tour:** step 1 shrinks to a welcome that points to Home for what the atlas means. The filter steps wait for item 2.
+- **Accessibility fixes in these files:**
+  - **`lang`:** `<html lang="en">` on both pages.
+  - **Logo:** it loses its inline style.
+  - **Landmarks:** `<header>`, `<nav>`, and `<main>` landmarks.
+  - **Unchanged for now:** the sidebar markup waits for item 2.
+
+**Other files:**
+- [check_data.py](data-pipeline/check_data.py): reads the checkboxes from `map/index.html`.
+- [scripts/analytics.js](scripts/analytics.js): both pages load it, so each page view counts.
+- [style.css](style.css): new Tab bar and Home blocks, built on the custom properties. `--tabBarHeight` and `--topBarHeight` drive the map's new offsets.
+- **Docs:** CLAUDE.md, the README, and Verify.md.
+
+**Not in this item:**
+- **Filters and the sidebar's Tachyons:** item 2.
+- **Stats:** item 3.
+- **The unclosed `<div id="Overlays">`:** item 2.
+
+**What changed:**
+- **[index.html](index.html):** rewritten as Home, with the approved wording and both Oʻahu "Try it" links.
+- **[map/index.html](map/index.html):** the old `index.html`, moved with `git mv` so its history follows it. It gets:
+  - the navbar
+  - root-relative paths
+  - `<html lang="en">` and a `<main>` landmark
+  - the title "Map | Hawaii Zoning Atlas"
+  - the logo without its inline style
+- **[scripts/home.js](scripts/home.js) (new):** forwards old `/#zoom/lat/lng…` links to `/map/`. Home loads it without `defer` on purpose: it runs before the page draws, so an old link doesn't flash Home first. It's the one exception to your defer rule, and it doesn't touch the page.
+- **[scripts/map.js](scripts/map.js):**
+  - **Paths:** data paths start at the root.
+  - **The pan:** it reads `--drawerOpenShare` and the tab bar's height.
+  - **Tour:** step 1 is a short welcome that points to the Home tab.
+- **[style.css](style.css):**
+  - **New blocks:** Tab bar and Home.
+  - **New variables:** `--colorBrand` (the logo's teal, deepened to 5:1 on white), `--colorZone*` for Home's key, `--topBarHeight`, `--tabBarHeight`, `--tabBarSpace`, and `--mapTop`.
+  - **The drawer:** its share variables now sit above the tab bar.
+  - **Hover effects:** they apply only with a mouse.
+- **[check_data.py](data-pipeline/check_data.py):** reads the checkboxes from `map/index.html`.
+- **[scripts/analytics.js](scripts/analytics.js):** its comment now names both pages.
+- **GitHub links:** Home's credits and the map's sidebar now point to your repo, boobeh123/HawaiiZoningAtlas, instead of the org's. You asked for this in chat.
+- **Docs:** CLAUDE.md and the README.
+
+**Claude's checks** (headless Edge, old site vs. new; all passed, no errors):
+- **Old links:** all 8 test links, opened at `/`, now land on `/map/`. They clean up exactly as before: the 7 bad links and a shared one.
+- **The map on desktop:** these match the old page:
+  - the filter results per county
+  - Clear filters
+  - the rail overlay
+  - the click zoom (it stays at 13)
+  - **Layout:** the top bar is 56 px, and the map and sidebar start below it.
+  - **Assets:** none returned a 404.
+- **The map on an iPhone SE:**
+  - **Tab bar:** it takes the bottom 60 px, with the drawer's bar above it. The map gets 559 of 667 px, and the Map/Satellite switch and the credits sit above the drawer's bar.
+  - **The drawer:** open, it takes 425 px (70% of the space above the tab bar).
+  - **The pan:** the islands land within 1 px of the strip's middle, and return exactly.
+  - **The card:** it works as before.
+- **The tour:** all 7 steps on a phone and on desktop, old and new.
+  - **The drawer:** on phones, it's open for the sidebar steps and closed for the map steps.
+  - **Taps:** none selected anything.
+  - **The end:** the tour is remembered.
+- **Home:**
+  - **Loading:** it loads no map scripts. It downloads 0.11 MB, against 14.2 MB for landing on the old map (measured locally, without compression).
+  - **Structure:** its headings go h1, h2, h3 in order, and it has header (on phones), nav, main, and footer landmarks.
+  - **Keyboard:** every Tab stop shows a focus ring.
+  - **Touch:** every standalone link is at least 44 px tall: the tabs, the brand, the button, and the "Try it" links.
+  - **One miss:** the four links inside the credits sentence are 18 px tall. WCAG's target-size rule exempts links inside a sentence, but they'd need to become a list to reach 44 px.
+- **"Try it" links:** both open `/map/` with exactly the right boxes checked.
+  - **Desktop:** Oʻahu fits whole.
+  - **iPhone SE:** Oʻahu's two tips run slightly past the edges.
+- **The pipeline:** `check_data.py` passes with the new path.
+
+**Your checks:**
+- [ ] Run the site locally and open http://localhost:8000. Home shows "Where can you build homes in Hawaiʻi?" On desktop, the top bar has Home underlined in teal.
+- [ ] Click **Open the map**. The map opens at `/map/`, with Map underlined in the top bar, and works as before. Then click **Home** in the bar to come back.
+- [ ] On Home, click the first **Open this view** link. The map opens on Oʻahu with 1-Family Housing on and only the two smallest lot sizes checked. The colored areas are where a house is allowed on less than half an acre, and the gray covers the rest of the island.
+- [ ] Open http://localhost:8000/#13/21.33752/-157.86051, an old-style link. It lands on `/map/#13/…` at the same spot.
+- [ ] In DevTools' device toolbar with iPhone SE, open http://localhost:8000. The brand is at the top and Home · Map is along the bottom. Tap **Map**: the Filters & overlays bar sits just above the tab bar, and tapping it opens the drawer with the islands still in view.
+
+**Decisions** (answered in chat, 2026-10-04):
+1. [x] **Phone map page:** no brand header, so the map stays full-screen.
+2. [x] **The map's URL:** `/map/`.
+3. [x] **Home's wording:** you approved the draft below ("Looks good").
+4. [x] **"Try it" examples:** start with Oʻahu, but with examples that don't depend on the coding under question:
+   - **Small-lot homes:** the lot-size data is straightforward.
+   - **ADUs:** the notes back up the coding.
+   - **Apartment buildings on Oʻahu:** they wait for the Honolulu data check.
+
+**Two findings for that check,** from Honolulu's own Special Notes:
+- **Apartments in R-5:** the note says housing with 3 or more units is allowed only through planned developments (PD-H) that "require … a public hearing". But 3- and 4+-family housing is coded "allowed as of right", which the map shows as allowed with no hearing. If the hearing is the only path, the coding should be "public hearing" instead.
+- **Farm dwellings:** Honolulu's Agricultural districts allow only farm dwellings and are coded as allowing 1-family homes. Hawaiʻi County codes the same situation as prohibited. That alone explains much of the 61% vs. 3% gap between the two counties.
+
+<details>
+<summary><strong>Draft of Home's wording</strong> (edit freely)</summary>
+
+**Where can you build homes in Hawaiʻi?**
+
+Zoning is the most important local law you've never heard of. It decides where homes can go, how big they can be, and what kind they can be: a single-family house, a duplex, or an apartment building. The Hawaii Zoning Atlas maps what every zoning district in all four counties allows, so anyone can see where housing can and can't be built.
+
+**[Open the map]**
+
+**How to read the map**
+
+Each shape on the map is a zoning district, and its color says what the district is mainly for:
+- **Primarily Residential:** housing is the main use.
+- **Mixed with Residential:** housing alongside shops, offices, or other businesses.
+- **Nonresidential:** housing isn't an independent use there, as in farm, industrial, and conservation districts.
+
+Pick a kind of housing under the filters, and the map keeps color only where it's allowed. Everywhere else turns gray.
+
+Click or tap a district to see what share of its county's zoned land allows what you picked. You'll also see the county's median household income, the share of households spending 30% or more of their income on housing, and the share of residents who are Native Hawaiian.
+
+Overlays add context: waterways, federal and state land (which counties can't zone), Hawaiian Home Lands, rail stations, and State House and Senate districts. On a phone, the filters and overlays live in the bar along the bottom of the map.
+
+**Try it on Oʻahu**
+
+- **Small lots: where can you build a house on less than half an acre?** The colored areas are where a single-family home is allowed on a small lot. Most of the rest of the island needs a much bigger lot, or doesn't allow homes at all. *(Opens the map on Oʻahu with 1-Family Housing on and only the two smallest lot sizes checked.)*
+- **Backyard homes: where can you add an ADU or ʻohana unit?** An accessory dwelling unit lets one lot hold a second, smaller home. Click a district to read its rules. Some ʻohana units require family members to live in both homes. *(Opens the map on Oʻahu with Accessory Dwelling Units on.)*
+
+**About the data**
+
+Our research team read the complete zoning codes of all four counties and recorded what each district allows, following the National Zoning Atlas's method. Federal and state land is left out of the acreage, because counties can't zone it. Every week, the map checks the team's research spreadsheet and updates when it has changed. County statistics come from the U.S. Census Bureau's 2020–2024 American Community Survey.
+
+This atlas supports the National Zoning Atlas movement, with support from Code with Aloha, Faith Action, and the Mercatus Center. The data and code are open source on GitHub.
+
+</details>
+
+---
+
+## Your feedback from the iPhone SE pass (2026-10-04; the zoom change is built and committed)
 
 - [x] **Desktop click zoom:** approved in chat. It's one rule everywhere now: a click zooms in to the county when you're zoomed out farther than the county, and never zooms out.
 - [x] **Default opacity:** decided in chat: it stays at 90%. The zone colors pass the palette checks only at 90%.
