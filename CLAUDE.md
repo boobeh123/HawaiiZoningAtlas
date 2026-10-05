@@ -125,7 +125,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **County selection.** Clicking a zone selects it (`districtActive`) and its county (`townActive`).
   - **Panel:** `buildDistrictDetails()` adds the district's name, flags, and full note to the area panel.
   - **Clicking:** another district in the same county switches the panel without moving the map. Clicking the same district again clears both.
-  - **Zoom:** `showCounty()` handles a newly selected county. Desktop fits the whole county; phones only zoom in, never out.
+  - **Zoom:** `showCounty()` handles a newly selected county. A click only zooms in, on every screen. From a wider view it fits the county, and from closer in the map stays where it is.
   - **Outline:** `drawCountyOutlines()` restyles the outlines. The selected county gets 5px cyan (`#00e5ff`, used by no other layer) and goes on top, and the rest get 2px faint white.
   - **Pane:** the outlines live in the `countyOutlines` pane (z-index 502), just above the `overlays` pane (501) that holds the House and Senate lines.
   - **Matching:** each `T` value should match two things:
