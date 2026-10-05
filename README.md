@@ -155,6 +155,8 @@ Our research team read the complete zoning codes of all four counties and record
 
 ### Features
 * Static webpage deployed on Netlify
+* A Home page that explains what the atlas shows and how to read the map, with "Try it" links that open the map already set up
+* A Home · Map navbar: a bottom tab bar on phones, and a top bar on wider screens
 * Responsive to mobile viewports: on phones, the map fills the screen, the filters slide up in a drawer, and a tapped district shows a short card that expands to the full details
 * Interactive Leaflet map of every zoning district in Hawaiʻi's four counties, colored by type: primarily residential, mixed with residential, or nonresidential. The colors stay distinct for colorblind visitors too
 * Filters for 1-family, 2-family, 3-family, and 4+-family housing and accessory dwelling units (ADUs), by approval process, minimum lot size, minimum unit size, elderly-only housing, and ADU rules
@@ -209,7 +211,13 @@ Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows
 
 #### The website
 
-[index.html](index.html) holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. **Tachyons** classes handle the layout.
+The site has two pages, linked by a Home · Map navbar. It's a tab bar along the bottom on phones and a top bar on wider screens.
+
+- **Home** ([index.html](index.html), at `/`):
+  - **What's on it:** what the atlas shows, how to read the map, and "Try it" links that open the map already set up.
+  - **How it's built:** plain HTML and CSS with no map scripts, so it loads in a fraction of the map's size.
+  - **Old links:** anything shared from the map before it moved to `/map/` still works, because [scripts/home.js](scripts/home.js) sends it there.
+- **The map** ([map/index.html](map/index.html), at `/map/`): it holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. **Tachyons** classes handle the layout.
 
 - **Loading:** `loadMapData()` fetches the county outlines and the zoning districts in parallel. A status message shows until they arrive, or explains the error if they don't
 - **Filters:** each checkbox's `name` is a property in `final.geojson`, and its `value` is one accepted answer (`name="1F" value="AH"` means 1-family housing allowed only after a public hearing). A district keeps its color only if it matches every checked group; otherwise it turns gray
@@ -237,7 +245,7 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 
 | Command | What it does |
 |---|---|
-| `python -m http.server 8000` | Serves the site at http://localhost:8000. The map's data can't load from `file://` |
+| `python -m http.server 8000` | Serves the site at http://localhost:8000, with the map at http://localhost:8000/map/. The map's data can't load from `file://` |
 | `node --env-file=.env tools/fetchDemographics.js --check` | Shows which Census release and definitions match the current county stats, without writing anything |
 | `node --env-file=.env tools/fetchDemographics.js 2024` | Rewrites `data/demographics.js` from the 2020–2024 release. Needs `CENSUS_API_KEY` in `.env` (see `.env.example`) |
 | `python pull_sheet.py` (from `data-pipeline/`) | Pulls the spreadsheet into `hawaii-zoning-data.csv` and lists what changed |
@@ -266,8 +274,14 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Phone drawer:** the map now fills a phone's screen. The filters open in a drawer from a bar along the bottom, and a tapped district shows a short card instead of a panel covering much of the map. The intro tour opens and closes the drawer as it goes
 - **Zone colors:** mixed-with-residential districts are now a deep purple, and nonresidential ones a soft orchid. They used to be the same muted purple at two strengths, which was hard to tell apart. All three zone colors now pass a palette check that includes colorblind vision, and the primarily residential magenta is unchanged
 - **Custom properties:** `style.css` keeps its colors, fonts, font sizes, and spacing in one set of CSS variables
+- **Home page and navbar:** a new Home page explains what the atlas shows and how to read it.
+  - **Weight:** it downloads about 0.1 MB, where landing on the map used to download all of the map data.
+  - **The map's new home:** it moved to `/map/`, and old shared links forward there.
+  - **Navbar:** a Home · Map tab bar links the two pages. On phones it sits under the filters drawer.
 
 #### Up next
 
-- Semantic HTML and accessibility
-- Replace Tachyons with plain CSS
+- A filter refactor: one list of filters builds the controls, as clearer, more accessible groups
+- Home page stats and more Census data, starting with a check of Honolulu's 3- and 4+-family coding
+- Semantic HTML and accessibility, as the remaining markup gets rebuilt
+- Replace Tachyons with plain CSS, as the remaining markup gets rebuilt
