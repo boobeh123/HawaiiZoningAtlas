@@ -6,7 +6,160 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Census data on Home (built, not committed yet)
+## Roadmap item 2: A filter refactor (approved, ready to build)
+
+- [x] Plan approved in chat (2026-10-04), with the recommended choice for all four decisions at the end.
+
+**Why the filters need it:**
+- **They're hard to read.**
+  - **Hidden options:** each housing type is a checkbox that reveals more checkboxes, already checked.
+  - **Double negatives:** options like "Not Restricted to Elderly Only".
+  - **A false alarm:** an empty group turns red, though empty actually means "no limit".
+  - **Cryptic sizes:** lot sizes read ".01-.46" acres.
+- **Several options change nothing on today's map** (counted in `final.geojson`):
+  - **Minimum home size:** no district has one, in any of the 4 housing types.
+  - **Elderly-only rules:** no district has one, for any housing type or for ADUs.
+  - **ADUs after a public hearing:** no district requires one.
+  - **"Not restricted to primary structure":** no district says yes. It only hides the 117 districts the researchers left blank.
+- **The HTML is hand-written:** five near-identical blocks, about 300 lines. Under the filter contract, a new filter has to touch this HTML, the data, and the notebook.
+- **Markup problems:**
+  - two elements share the ID `PermittedResidentialUses`
+  - `<div id="Overlays">` is never closed
+  - the sidebar is all Tachyons classes
+
+**What you'll see** (the sidebar on desktop, the drawer on phones):
+
+```
+Housing types                                      [✕ Clear]
+Districts that allow every type you turn on stay colored.
+
+[✓] 1-family homes
+      How it's allowed   (•) Either way  ( ) By right only  ( ) Only after a hearing
+      Lot size needed    (•) Any  ( ) Under ½ acre  ( ) Under 1 acre  ( ) Under 2 acres
+[ ] 2-family homes (duplexes)
+[ ] 3-family homes
+[ ] 4+ family homes (small apartment buildings)
+[✓] Accessory dwelling units (ADUs)
+      Only show districts where it…
+      [ ] doesn't need the owner to live on the property
+      [ ] can be rented out
+      [ ] can house anyone, not just family or employees
+      [ ] has no size cap
+```
+
+- **Approval:** "Either way", "By right only", or "Only after a hearing", one choice. A group can no longer be left empty.
+- **Lot sizes:** each choice is a ceiling. "Under ½ acre" means no minimum, or a minimum under half an acre.
+  - **Exact ranges:** the notebook's buckets top out at 0.46, 0.91, and 1.83 acres, so the labels are exact.
+  - **Blank minimums:** 12 districts that allow 1-family homes have a blank minimum lot size. The notebook counts those as "no minimum", the same convention as Feature 7's "no limit" answers.
+- **Positive wording:** ADU options say what's allowed, and none are double negatives.
+- **Matching:** unchanged. Turning on two types still shows districts that allow both, and now the panel says so.
+
+**How it's built:**
+- **One config, [data/filters.json](data/filters.json) (new):** it lists each housing type, its options, their labels, and the data value each option matches.
+  - **`map.js`:** it builds the controls from the config, with `<fieldset>` and `<legend>`, real radio groups, and labels.
+  - **Adding a filter:** that becomes one entry in this file, plus the notebook and data steps that already exist.
+- **Links:** shared links keep the same format (`1F=&1F=A&1F=AH&1MLS=A&1MLS=B`).
+  - **Reading and writing:** a small translation layer turns the controls into those pairs and back, using the config.
+  - **Old links:** every link people have shared still opens the same filters, apart from the odd lot-size mixes covered in decision 1.
+- **[check_data.py](data-pipeline/check_data.py):** it reads the config instead of the HTML. A config value missing from the data fails the check, as a missing checkbox does today.
+- **The rest of the sidebar:** the zone-type key, the overlays, and the opacity slider become semantic HTML with `style.css` classes.
+  - **Labels:** the opacity slider gets a proper `<label>`.
+  - **Bugs:** the duplicate ID and the unclosed `<div>` get fixed.
+  - **Tachyons:** none is left in the sidebar. The area panel keeps its Tachyons for now.
+- **Tour:** its filter, overlay, and opacity steps get rewritten for the new controls.
+- **Docs:** CLAUDE.md (the filter contract changes), the README, and Verify.md.
+
+**How Claude will check it** (headless Edge, old vs. new):
+- **Same results:** for a set of links covering every kind of filter, each county colors the same districts as today. The set includes:
+  - each housing type
+  - by right only, and hearing only
+  - each lot-size ceiling
+  - two types at once
+  - ADU rules
+  - the 7 bad links
+- **Same links:** the new controls write the same link format, and Clear filters and the drawer's filter count still work.
+- **Keyboard and screen readers:**
+  - every option is reachable by Tab
+  - radio groups move with the arrow keys
+  - every group has a legend
+  - every control shows a focus ring
+- **Phones:** the drawer holds the new controls, with tap targets of at least 44px. The tour's steps still open and close the drawer.
+- **`check_data.py`:** it passes with the config, and fails on a deliberately broken one.
+- **Errors:** none.
+
+**Decisions** (approved in chat, 2026-10-04; all the recommended choices):
+1. [x] **Lot sizes:** ceilings as radio buttons. A rare old link with an unusual mix, like only ".47–.91", opens as "Any".
+2. [x] **Options that change nothing today:** hidden while the data can't tell districts apart. The page checks this as the data loads, so an option comes back on its own once the spreadsheet starts recording it.
+3. [x] **ADU rules and blank answers:** a checked rule also hides districts the researchers left blank, as today, and a hint says so.
+4. [x] **Wording:** the draft is below, and you edit it when you review the build.
+
+**Build notes** (for whichever session builds this; it may be a cloud session, which sees only the repo):
+- **When an option counts as "changes nothing":** checking it can't change which districts stay colored. That means every district that allows its housing type already has the option's value.
+  - **Compute it from `final.geojson` as it loads.** Today that hides:
+    - minimum home size, for all four types
+    - elderly-only, for all four types and for ADUs
+    - the ADUs' whole "How it's allowed" choice, because no ADU district needs a hearing
+  - **"Can be a separate building" (`APrim`) stays.** It does hide districts the researchers left blank, so it gets decision 3's hint.
+- **The translation layer:** `getFilters()`, `getFormParams()`, and `setFilters()` go through the config, not raw checkbox names and values.
+  - **Two values from one choice:** a radio like "Either way" stands for two values (`1F=A&1F=AH`), so links and filtering must still produce exactly today's name and value pairs.
+  - **Matching stays as is:** `satisfiesFilters()` keeps working on `{name: [values]}`.
+- **Loading:** the config is a JSON file, so `initMap()` fetches it before `setFilters()` restores a link. Build the controls first, then restore the link, then start the tour.
+- **Test links that must color the same districts as `main`:**
+  - each type on its own
+  - each type by right only, and only after a hearing
+  - 1-family under ½, 1, and 2 acres
+  - 2-family and 3-family together
+  - ADUs with each rule
+  - the 7 bad links in Feature 2's section
+  - the shared link `#12/21.33752/-157.86051/1F=&1F=A&1F=AH&1MLS=A&1MLS=B&townActive=Honolulu&Overlay=transit&opacity=90`
+- **Testing gotchas:**
+  - **Folder paths:** the test server has to serve `index.html` for `/map/`.
+  - **House and Senate:** they stack in whichever order their files arrive, so turn them off before screenshots.
+  - **CDNs:** a cloud session can't reach them, so its fonts differ. The VS Code session re-tests with the real ones before merging.
+
+<details>
+<summary><strong>Wording draft</strong> (edit freely)</summary>
+
+- **Section heading:** Housing types. It replaces "Permitted Residential Uses".
+- **Under the heading:** "Turn on a type to see only the districts that allow it. Districts that allow every type you turn on stay colored."
+- **The types:**
+  - 1-family homes
+  - 2-family homes (duplexes)
+  - 3-family homes (triplexes)
+  - 4+ family homes (apartment buildings)
+  - Accessory dwelling units (ADUs), with the hint "A second, smaller home on the same lot, like a backyard cottage or an ʻohana unit."
+- **How it's allowed:**
+  - **Options:** Either way · By right only · Only after a public hearing.
+  - **Hint:** "By right means the county approves it when it meets the rules, with no public hearing."
+- **Lot size needed:**
+  - **Options:** Any size · Under ½ acre · Under 1 acre · Under 2 acres.
+  - **Hint:** "The smallest lot this kind of home needs. Districts with no minimum count as any size."
+- **ADU rules:**
+  - **Legend:** "Only show districts where an ADU…"
+  - **Options:**
+    - doesn't need the owner to live on the property
+    - can be rented out
+    - can house anyone, not just family or employees
+    - can be a separate building, like over a garage
+    - has no size cap
+  - **Hint:** "A rule also hides districts the researchers left blank on it."
+- **Overlays:**
+  - Waterways
+  - Federal lands
+  - State lands
+  - Hawaiian Home Lands (DHHL)
+  - Rail stations (½-mile circles)
+  - State House districts
+  - State Senate districts
+- **Opacity:** "Zone opacity", as a real label for the slider.
+
+</details>
+
+**Size:** this is the biggest item so far. If you'd like to spend your cloud credits, a cloud session could build it once you've approved it. I'd then re-test its branch here with the real CDNs before you merge.
+
+---
+
+## Census data on Home (built and committed)
 
 - [x] Plan approved in chat (2026-10-04).
 
