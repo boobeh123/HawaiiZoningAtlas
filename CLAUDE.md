@@ -100,6 +100,8 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **The tour:** `showTourStep()` opens the drawer for steps inside `#sidebar` and closes it for the map's steps.
       - **Drawer height:** `.drawerTour` holds it at `--drawerTourShare` (0.45) of the screen above the tab bar, so the popovers keep room.
       - **Placement:** each step's element goes as low in the drawer as it fits.
+      - **The highlight:** Driver's `padding` is 0 on phones, so the highlight hugs the element instead of poking out of the drawer. A step taller than the drawer gets `.tourStepClamp`, which cuts it to the drawer's height for that step.
+      - **Popovers:** on drawer steps they're capped to the space above the drawer, and their footer is sticky, so the buttons always show. A teal inset ring on `#driver-highlighted-element-stage` outlines every highlight, on every screen.
       - **Stray taps:** Driver.js changes steps on `touchstart`, so the tap's own click would land on whatever the new step put under the finger. After a touch step change, `swallowNextClick` eats that one click.
       - **The bar:** it does nothing while the tour runs.
   - **601–1139px:** the area panel moves beside the sidebar. A centered panel would overlap it.
