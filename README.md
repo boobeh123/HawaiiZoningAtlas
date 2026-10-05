@@ -260,7 +260,8 @@ It finds each value by its label, because the Census Bureau renumbers variables 
 - **Selected county:** outlined in thick cyan above the House and Senate lines, where it used to be a thin yellow line that blended into the Senate districts
 - **Spreadsheet sync:** the GitHub Action that pulls the research spreadsheet works again, weekly. It now also rebuilds the map data, checks it, and deploys it
 - **District notes:** the researchers' Special Notes now show for 161 districts, including why Hawaiʻi County's farm districts count 1-family homes as prohibited
-- **Phones:** no tooltips covering the small map, and tapping a district never zooms out
+- **Phones:** no tooltips covering the small map
+- **Click zoom:** clicking a district never zooms the map out, on any screen. It zooms in to the county only when you're zoomed out farther than the county
 - **Smaller map data:** the zoning file is half its old size (25.4 → 12.6 MB, or 8.6 → about 3.0 MB as sent), so the map loads in 3.6 s instead of 8.5 s on a 10 Mbps connection. The county outlines and the rail line shrank too, and the map looks the same
 - **Phone drawer:** the map now fills a phone's screen. The filters open in a drawer from a bar along the bottom, and a tapped district shows a short card instead of a panel covering much of the map. The intro tour opens and closes the drawer as it goes
 - **Zone colors:** mixed-with-residential districts are now a deep purple, and nonresidential ones a soft orchid. They used to be the same muted purple at two strengths, which was hard to tell apart. All three zone colors now pass a palette check that includes colorblind vision, and the primarily residential magenta is unchanged
