@@ -1,6 +1,7 @@
 /*
- * Google Analytics (gtag.js) setup. It lives here instead of an inline script
- * in index.html. Set measurementId to '' to turn Analytics off.
+ * Google Analytics (gtag.js) setup, loaded by both pages (index.html and
+ * map/index.html) instead of an inline script. Set measurementId to '' to turn
+ * Analytics off.
  */
 const measurementId = 'G-ZTZX623WY7'
 
