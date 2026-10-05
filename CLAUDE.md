@@ -48,7 +48,7 @@ Don't use the `data-pipeline/Dockerfile`. Its `CMD` runs `hzadata.py`, which doe
 
 ## Deployment
 
-The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Each visit downloads `data/final.geojson` (12.6 MB, about 3.0 MB as Netlify's Brotli sends it) and `counties.geojson`, plus each overlay's file the first time its box is checked. House and Senate are checked by default. Keep committed GeoJSON simplified and minified. `data-pipeline/shrink_geojson.py` rounds coordinates to 5 decimal places and drops the spaces.
+The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the repo root, with no build step, so **a push to `main` is a production deploy**. The root `CNAME` file is the org's old GitHub Pages setting for hawaiizoningatlas.com, and Netlify ignores it. Home downloads none of the map data. Each visit to the map downloads `data/final.geojson` (12.6 MB, about 3.0 MB as Netlify's Brotli sends it) and `counties.geojson`, plus each overlay's file the first time its box is checked. House and Senate are checked by default. Keep committed GeoJSON simplified and minified. `data-pipeline/shrink_geojson.py` rounds coordinates to 5 decimal places and drops the spaces.
 
 **Keys.** Anything the browser loads is public, so only public keys belong in site code.
 - **CARTO basemap keys:** `cartoApiKey` in `initMap()`, sent as `?key=` on both basemap tile URLs. There are two keys. On `localhost` and `127.0.0.1` the map uses the localhost key, and everywhere else it uses the production key.
@@ -56,8 +56,19 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **How it's protected:** with domain restrictions in CARTO's basemaps dashboard, not by hiding it.
 - **Census API key:** secret. Only `tools/fetchDemographics.js` uses it, on your machine, and the script bakes the numbers into `data/demographics.js`. The key never goes in site code.
 
-## Site architecture (`index.html` + `scripts/map.js`)
+## Site architecture (`index.html`, `map/index.html`, and `scripts/map.js`)
 
+- **Two pages.**
+  - **Home (`index.html`, at `/`):** what the atlas shows, how to read the map, and "Try it" links that open the map already set up. It uses links in the shared-link format.
+    - **Plain:** semantic HTML and `style.css` only, with no Tachyons, jQuery, Leaflet, or map data.
+  - **The map (`map/index.html`, at `/map/`):** everything below is about this page.
+  - **Root-relative paths:** both pages load assets from the site's root (`/style.css`, `/data/…`, `/scripts/…`). So the site has to be served from a domain root, as Netlify and `python -m http.server` both do.
+  - **Old links:** links to the map used to point at `/`. `scripts/home.js` forwards any `/#zoom/lat/lng…` link to `/map/`, hash and all. Home loads it without `defer` on purpose, so it runs before the page draws.
+  - **The navbar:** `.tabBar` (Home · Map). Its markup is in both pages, so change both together. The current page's link has `aria-current="page"`.
+    - **Wider screens:** it's the top bar (`--topBarHeight`).
+    - **Phones:** it's fixed along the bottom (`--tabBarSpace`, its height plus the safe area).
+    - **`--mapTop`:** the top bar's height on wider screens and 0 on phones. The map, the sidebar, the area panel, and the status line all start below it.
+  - **Zone colors on Home:** its key uses the `--colorZone*` variables in `style.css`. They match `zone2color` in `map.js`, so change them together.
 - **Script loading.** Plain global script tags, no modules or bundler, so every script shares one set of global names. That's why the map's layer is called `zonesLayer`: Google Analytics owns `window.dataLayer`.
   - jQuery 3.5.1, Leaflet 1.7.1, Driver.js 0.9.8, and Tachyons CSS load from CDNs. Esri Leaflet also loads, but nothing uses it.
   - `scripts/` holds `map.js` and `analytics.js`. `analytics.js` sets up Google Analytics and skips it on localhost.
@@ -66,14 +77,14 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **Tachyons.** The markup uses Tachyons utility classes. `map.js` toggles `dn` (display:none) to show and hide filter subgroups and the area calculator.
 - **Custom properties.** `style.css` defines its colors, fonts, font sizes, and spacing on `:root`, for example `--colorText`, `--fontHeading`, `--fontSizeBase`, `--spaceMd`, and `--edgeGap`. Use them instead of raw values.
   - **`em` sizes:** they stay relative on purpose.
-  - **Tachyons:** its classes in `index.html` still set most text colors and sizes.
+  - **Tachyons:** its classes in `map/index.html` still set most text colors and sizes.
 - **Layout.** All media queries live in the Media queries block at the bottom of `style.css`.
-  - **Phones (600px and narrower):** the map fills the screen above a 48px bar (`--phoneMapHeight`), and `#sidebar` is a drawer along the bottom.
+  - **Phones (600px and narrower):** the map fills the screen above a 48px bar (`--phoneMapHeight`). `#sidebar` is a drawer that sits just above the tab bar.
     - **Same breakpoint in JS:** `phoneMediaQuery` in `map.js`. `initMap()` uses it to start phones at zoom 6.
-    - **The drawer:** the bar is `#drawerToggle`. `setDrawerOpen()` toggles `.drawerOpen` (70dvh) and `aria-expanded`.
+    - **The drawer:** the bar is `#drawerToggle`. `setDrawerOpen()` toggles `.drawerOpen` and `aria-expanded`. Open, the drawer takes `--drawerOpenShare` (0.7) of the screen above the tab bar.
       - **Closed:** `#HiZoningAtlas` is `inert`, so Tab and screen readers skip it.
       - **Open:** it covers the map's bottom corners, so `.leaflet-bottom` is `inert` instead. It sits at z-index 1001, above Leaflet's controls (1000).
-      - **The bar's click:** opening pans the map up (`map.panBy`), so the middle of the map lands in the strip above the drawer, and closing pans back.
+      - **The bar's click:** opening pans the map up (`map.panBy`), so the middle of the map lands in the strip above the drawer, and closing pans back. The pan reads `--drawerOpenShare` and the tab bar's height.
       - **Without the tour:** the listener is attached before `new Driver`, so it still works if Driver.js fails to load (`driver?.isActivated`).
       - **Grows instead of sliding:** Driver.js's `.driver-fix-stacking` forces `transform: none` on the highlighted element's parents.
       - **`overflow: clip`:** unlike `hidden`, it can't be scrolled, so a rotation or a `#link` can't shift the bar out of place.
@@ -85,7 +96,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
       - **Size:** it's capped at 40% of the map's height, or the strip above the open drawer, and scrolls as one box. The tapped district comes first (flex `order`).
       - **Hiding:** `#activeAreaCalculator:not(.dn)` keeps Tachyons' `dn` able to hide it.
     - **The tour:** `showTourStep()` opens the drawer for steps inside `#sidebar` and closes it for the map's steps.
-      - **Drawer height:** `.drawerTour` holds it at 45dvh, so the popovers keep room.
+      - **Drawer height:** `.drawerTour` holds it at `--drawerTourShare` (0.45) of the screen above the tab bar, so the popovers keep room.
       - **Placement:** each step's element goes as low in the drawer as it fits.
       - **Stray taps:** Driver.js changes steps on `touchstart`, so the tap's own click would land on whatever the new step put under the finger. After a touch step change, `swallowNextClick` eats that one click.
       - **The bar:** it does nothing while the tour runs.
@@ -104,7 +115,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **`permanent: true`:** these labels need it, or Leaflet closes them on any map click.
     - **Hiding:** hidden labels use `visibility: hidden`, not `display: none`. Leaflet centers tooltips using their size, and a `display: none` label has no size, so it drifts off its spot.
 - **Rendering data.** Leaflet's `bindTooltip`/`bindPopup` and jQuery's `.html()` parse strings as HTML. Build anything that contains data or URL text with `createTextElement()` or `textContent`, as `buildZoneTooltip()`, `buildDistrictDetails()`, and `calculateActiveArea()` do. Never build it from HTML strings. Some Special Notes contain `<`.
-- **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
+- **Filter contract.** A sidebar checkbox's `name` is a property key in `final.geojson`, and its `value` is one accepted value of that key (`name="1MLS" value="B"`). `getFilters()` builds `{name: [checked values]}`. `satisfiesFilters()` requires `feature.properties[name]` to be in that list for every name except `Overlay`. If a key or value is missing from the data, nothing errors; every zone just renders gray as "not satisfying". So any filter change has to touch `map/index.html`, the data, and the notebook's `cols_xwalk`/`vals_xwalk` together.
 - **Group checkboxes.** The main checkbox in each `.filter-group` has `value=""`, so `getFilters` skips it. All it does is reveal its `.subgroup` and check that group's `.checked-by-default` boxes.
 - **Overlay checkboxes.** Checkboxes with `name="Overlay"` toggle layers rather than filter zones. Each `value` is a key in `overlays`: `hydro`, `federal`, `state`, `DHHL`, `transit`, `house`, `senate`. They also carry the `main-in-group` class, so check `name !== 'Overlay'` whenever code means "housing filters".
 - **Clear filters.** The ✕ (`#resetFilters`) is a `<button>`.
@@ -135,7 +146,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - `scripts/leaflet-hash.js` is a **modified** leaflet-hash that keeps everything after the third segment. Don't replace it with the upstream library.
   - `updateUrl()` writes the filter part with `getFormParams()`, which is `URLSearchParams` over `FormData`. That's the same format jQuery's `serialize()` produced.
   - `setFilters()` reads it with `getUrlFilterParams()` and only restores values that match a real input.
-  - **A link defines the whole form:** when a link has a filter part, `setFilters()` unchecks every box first. Boxes checked in `index.html` (House and Senate) only apply when there's no link. Otherwise a link couldn't turn them off.
+  - **A link defines the whole form:** when a link has a filter part, `setFilters()` unchecks every box first. Boxes checked in `map/index.html` (House and Senate) only apply when there's no link. Otherwise a link couldn't turn them off.
   - `loadZones()` drops a `townActive` that has no zoning data, and rewrites any link that carried junk.
   - Never build selectors from URL text. The bad-link regression list is in `Verify.md`.
 
