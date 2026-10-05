@@ -518,6 +518,52 @@ p .zoneSwatch {
   background-color: var(--colorZoneNotSatisfying);
 }
 
+/* The four counties at a glance (see countyStats.js). On a narrow screen the
+   table scrolls sideways inside this box, never the page. */
+.tableScroll {
+  overflow-x: auto;
+}
+
+.countyStatsNote {
+  color: var(--colorTextMuted);
+}
+
+.countyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fontSizeSm);
+  line-height: 1.4;
+}
+
+.countyTable caption {
+  caption-side: bottom;
+  padding-top: var(--spaceSm);
+  color: var(--colorTextMuted);
+  text-align: left;
+}
+
+.countyTable th,
+.countyTable td {
+  padding: var(--spaceSm) var(--spaceXs);
+  border-bottom: 1px solid var(--colorBorder);
+  text-align: right;
+}
+
+.countyTable thead th {
+  font-family: var(--fontHeading);
+  letter-spacing: 0.02em;
+  vertical-align: bottom;
+}
+
+/* County names read left to right, and numbers line up on the right */
+.countyTable th:first-child {
+  text-align: left;
+}
+
+.countyTable td {
+  font-variant-numeric: tabular-nums;
+}
+
 /* "Try it" cards, each a link that opens the map already set up */
 .tryList {
   display: grid;
