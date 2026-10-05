@@ -17,6 +17,10 @@
 
 	<!-- Google Analytics (gtag.js), set up in scripts/analytics.js -->
 	<script src="/scripts/analytics.js" defer></script>
+
+	<!-- The county Census figures, the same file the map uses, then the table built from them -->
+	<script src="/data/demographics.js" defer></script>
+	<script src="/scripts/countyStats.js" defer></script>
 </head>
 
 <body class="homeBody">
@@ -103,6 +107,18 @@
 				rail stations, and State House and Senate districts. On a phone, the filters and overlays live in the bar
 				along the bottom of the map.
 			</p>
+		</section>
+
+		<section class="homeSection" aria-labelledby="countyFigures">
+			<h2 id="countyFigures">The four counties at a glance</h2>
+			<p>
+				When you click a district, the map shows these Census figures for its county. Here they are side by
+				side.
+			</p>
+			<!-- scripts/countyStats.js replaces this note with the table -->
+			<div class="tableScroll" id="countyStats">
+				<p class="countyStatsNote">The county figures need JavaScript to show.</p>
+			</div>
 		</section>
 
 		<section class="homeSection" aria-labelledby="tryIt">
