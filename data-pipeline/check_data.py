@@ -9,8 +9,8 @@ has been copied to data/final.geojson:
 It compares the map data with the version in the last commit, and exits with
 an error, so the sync pushes nothing, if anything looks broken:
 - all four counties are there, and none lost more than a fifth of its districts
-- every sidebar checkbox still matches at least one district
-- the flags are still the text the site's checkboxes and tooltip compare against
+- every option in data/filters.json still matches at least one district
+- the flags are still the text the site's filters and tooltip compare against
 
 It uses only the standard library, so it runs without the notebook's packages.
 """
@@ -19,20 +19,19 @@ import json
 import subprocess
 import sys
 from collections import Counter
-from html.parser import HTMLParser
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 DATA = REPO / "data" / "final.geojson"
-INDEX = REPO / "map" / "index.html"
+FILTERS = REPO / "data" / "filters.json"
 
 COUNTIES = {"Hawaii", "Honolulu", "Kauai", "Maui"}
 
 # A county losing more of its districts than this means something broke
 LARGEST_DROP = 0.2
 
-# Checkboxes that match no district on purpose: no county's ADU answer is
-# "Public Hearing"
+# Filter values that match no district on purpose: no county's ADU answer
+# is "Public Hearing"
 NO_MATCH_EXPECTED = {("AD", "AH")}
 
 # The site compares these properties as text (see the notebook's save cell)
@@ -46,17 +45,18 @@ FLAG_VALUES = {
 }
 
 
-class CheckboxParser(HTMLParser):
-    """Collects the name and value of every checkbox on the map page."""
-
-    def __init__(self):
-        super().__init__()
-        self.checkboxes = set()
-
-    def handle_starttag(self, tag, attrs):
-        attributes = dict(attrs)
-        if tag == "input" and attributes.get("type") == "checkbox":
-            self.checkboxes.add((attributes.get("name"), attributes.get("value")))
+def load_filter_pairs():
+    """Returns every (key, value) pair the map's filters can ask for."""
+    config = json.loads(FILTERS.read_text(encoding="utf-8"))
+    pairs = set()
+    for housing_type in config["housingTypes"]:
+        for group in housing_type["groups"]:
+            if group["type"] == "choice":
+                for choice in group["choices"]:
+                    pairs.update((group["key"], value) for value in choice["values"])
+            else:
+                pairs.update((option["key"], option["value"]) for option in group["options"])
+    return pairs
 
 
 def load_features(path):
@@ -99,14 +99,12 @@ def main():
                 f"to {counts[county]} districts"
             )
 
-    # Every checkbox should still match some district
-    parser = CheckboxParser()
-    parser.feed(INDEX.read_text(encoding="utf-8"))
-    for name, value in sorted(parser.checkboxes, key=str):
-        if name == "Overlay" or not value or (name, value) in NO_MATCH_EXPECTED:
+    # Every filter option should still match some district
+    for name, value in sorted(load_filter_pairs()):
+        if (name, value) in NO_MATCH_EXPECTED:
             continue
         if not any(feature["properties"].get(name) == value for feature in features):
-            problems.append(f"No district matches the {name}={value} checkbox")
+            problems.append(f"No district matches the {name}={value} filter option")
 
     # Flags must stay the text the site compares against
     for key, allowed in FLAG_VALUES.items():
