@@ -846,7 +846,12 @@ const buildAreaCloseButton = () => {
   button.type = 'button'
   button.title = 'Close'
   button.setAttribute('aria-label', 'Close the county panel')
-  button.addEventListener('click', closeAreaPanel)
+  button.addEventListener('click', () => {
+    closeAreaPanel()
+    // The button closes with the panel, so keyboard focus goes back to the
+    // map, where the district was clicked, instead of the top of the page
+    document.querySelector('#map').focus({ preventScroll: true })
+  })
   return button
 }
 
@@ -1722,15 +1727,18 @@ var initMap = async function () {
     // Phones: the highlight hugs the element. Driver.js's default 10px of
     // room around it would poke out of the drawer and past the screen's sides.
     padding: matchMedia(phoneMediaQuery).matches ? 0 : 10,
-    // Phones: keep the element where showTourStep put it. Driver.js's own
-    // check can't tell it's already in view inside the drawer, and would
-    // center it, which tucks the top of a tall step under the drawer's bar.
-    scrollIntoViewOptions: matchMedia(phoneMediaQuery).matches
-      ? { behavior: 'instant', block: 'nearest' }
-      : null,
+    // Scroll a step only as far as it takes to show it. Driver.js's default
+    // centers it, which on phones moves it from where showTourStep put it
+    // and tucks the top of a tall step under the drawer's bar. On wider
+    // screens, centering the whole sidebar (step 1), which is taller than
+    // the screen, pushes the top of its popover above the screen.
+    scrollIntoViewOptions: { behavior: 'instant', block: 'nearest' },
     // Driver.js calls this before it measures the step's element
     onHighlightStarted: (element) => {
       swallowNextClick = lastPressWasTouch
+      // Phones: gives the steps room for the highlight's ring (see
+      // .tourRunning in style.css), in time for Driver.js to measure them
+      document.body.classList.add('tourRunning')
       showTourStep(element)
     },
     // Driver.js calls this when the tour is closed or finished
@@ -1740,6 +1748,7 @@ var initMap = async function () {
       // Phones: the map gets the screen back, and the drawer will next open
       // at its top
       unclampTourStep()
+      document.body.classList.remove('tourRunning')
       document.querySelector('#sidebar').classList.remove('drawerTour')
       setDrawerOpen(false, { animate: false })
       document.querySelector('#HiZoningAtlas').scrollTop = 0
