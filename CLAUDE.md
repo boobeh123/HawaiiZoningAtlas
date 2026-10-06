@@ -100,7 +100,16 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
     - **The tour:** `showTourStep()` opens the drawer for steps inside `#sidebar` and closes it for the map's steps.
       - **Drawer height:** `.drawerTour` holds it at `--drawerTourShare` (0.45) of the screen above the tab bar, so the popovers keep room.
       - **Placement:** each step's element goes as low in the drawer as it fits.
-      - **The highlight:** Driver's `padding` is 0 on phones, so the highlight hugs the element instead of poking out of the drawer. A step taller than the drawer gets `.tourStepClamp`, which cuts it to the drawer's height for that step.
+      - **Scrolling:** Driver's `scrollIntoViewOptions` is `block: 'nearest'` on every screen. Its default, `center`, has two problems:
+        - on phones, it would move a drawer step from where `showTourStep()` put it
+        - on desktop, step 1 is the whole sidebar, which is taller than the screen, so centering it pushes the top of its popover above the screen
+      - **The highlight:** Driver's `padding` is 0 on phones, so the highlight hugs the element instead of poking out of the drawer.
+        - **Tall steps:** a step taller than the drawer gets `.tourStepClamp`, which cuts it to the drawer's height for that step.
+        - **The ring:** while `body.tourRunning` is set (by `onHighlightStarted`, and removed by `onReset`), the sidebar's sections and the Map/Satellite list get `--spaceXs` of side padding, with a matching negative margin, so the ring lands beside the text instead of on it.
+        - **Why our own class:** Driver.js's markers don't work for this:
+          - it adds `.driver-highlighted-element` only after it measures the step
+          - with `animate: false` it removes `#driver-page-overlay` right away
+          - it only hides its popover when the tour ends
       - **Popovers:** on drawer steps they're capped to the space above the drawer, and their footer is sticky, so the buttons always show. A teal inset ring on `#driver-highlighted-element-stage` outlines every highlight, on every screen.
       - **Stray taps:** Driver.js changes steps on `touchstart`, so the tap's own click would land on whatever the new step put under the finger. After a touch step change, `swallowNextClick` eats that one click.
       - **The bar:** it does nothing while the tour runs.
@@ -147,7 +156,9 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 - **County selection.** Clicking a zone selects it (`districtActive`) and its county (`townActive`).
   - **Panel:** `buildDistrictDetails()` adds the district's name, flags, and full note to the area panel.
   - **Clicking:** another district in the same county switches the panel without moving the map. Clicking the same district again clears both.
-  - **Closing:** the panel's ✕ (`buildAreaCloseButton()`) calls `closeAreaPanel()`, which deselects the district and county the same way. The filters stay. The panel reserves room on its right for the ✕: 40px, or 48px on phones, where the ✕ is a 44px target.
+  - **Closing:** the panel's ✕ (`buildAreaCloseButton()`) calls `closeAreaPanel()`, which deselects the district and county the same way. The filters stay. The ✕ disappears with the panel, so focus moves to `#map`.
+    - **No focus ring on the map:** Leaflet 1.7.1 hides it twice: with `outline: 0` in its CSS, and with an inline `outline: none` on every key and mouse event inside the map.
+    - **Don't force the ring back with `!important`:** Leaflet focuses the map from its mousedown handler, so Chrome counts it as `:focus-visible`, and mouse users would get a ring around the whole map. The panel reserves room on its right for the ✕: 40px, or 48px on phones, where the ✕ is a 44px target.
   - **Zoom:** `showCounty()` handles a newly selected county. A click only zooms in, on every screen. From a wider view it fits the county, and from closer in the map stays where it is.
   - **Outline:** `drawCountyOutlines()` restyles the outlines. The selected county gets 5px cyan (`#00e5ff`, used by no other layer) and goes on top, and the rest get 2px faint white.
   - **Pane:** the outlines live in the `countyOutlines` pane (z-index 502), just above the `overlays` pane (501) that holds the House and Senate lines.
