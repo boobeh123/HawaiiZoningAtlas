@@ -6,7 +6,7 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
-## Roadmap item 2: A filter refactor (built on the `claude/filter-refactor` branch, not merged)
+## Roadmap item 2: A filter refactor (merged and live)
 
 - [x] Plan approved in chat (2026-10-04), with the recommended choice for all four decisions at the end.
 
@@ -157,8 +157,10 @@ Districts that allow every type you turn on stay colored.
 
 **Built** (2026-10-05, in a Claude Code cloud session):
 - **Where:** the `claude/filter-refactor` branch on your repo (`origin`, boobeh123/HawaiiZoningAtlas), branched from `main` at `7c70c8c`.
-- **Not done:** it isn't merged, so the live site hasn't changed.
-- **Before you merge:** the plan is for your VS Code session to re-test it with the real CDNs.
+- **Merged:** pull request #1 merged it into `main` as `451c1fd` on 2026-10-05, so it's live.
+- **After the merge:**
+  - **Re-tested:** your VS Code session re-tested it on the live site, with the real fonts and CDNs (see Claude's checks).
+  - **Cleaned up:** both `claude/*` branches were deleted, locally and on GitHub.
 
 **What changed:**
 - [data/filters.json](data/filters.json) (new): the five housing types, their option groups, the wording draft's labels and hints, and the data values each option stands for.
@@ -237,8 +239,92 @@ Districts that allow every type you turn on stay colored.
     - **Desktop and tablet:** a 32 px ✕ in the top-right corner.
     - **Phone:** a 44 px ✕ beside the card's expand arrow, not overlapping it.
     - **All three:** the screen-reader name is "Close the county panel".
+- **Re-test with the real fonts and CDNs (2026-10-05, after the merge):** headless Edge, on the live site, and locally against `7c70c8c` (`main` before the merge).
+  - **Setup:**
+    - **Blocked:** Google Analytics and the map tiles, so the runs didn't count as visits.
+    - **Fonts:** Red Hat Display, Zodiak, and Material Icons all loaded.
+  - **Same coloring:** the 35 links again, on `7c70c8c` and on `main`. 33 are identical, and the same 2 differ as decided.
+  - **Phone tour** (375×667 and 320×568, all 7 steps, stepped with taps):
+    - every popover sits above the drawer and inside the screen
+    - Close, Previous, and Next always show, pinned at the popover's bottom
+    - the highlight stays inside the drawer and never covers the tab bar
+    - the teal ring shows, with no sideways scroll
+    - afterward, no district is selected
+  - **The drawer bar** (280, 320, and 375 px wide):
+    - "Filters & overlays" and "2 filters on" fit on one line at every width, with nothing shortened or cut off.
+    - With two types on, nothing in the open drawer sticks out.
+  - **The area panel's ✕** (desktop, tablet, and phone):
+    - **The icon:** it draws as a ✕.
+    - **Size:** 32 px on desktop and tablet. On phones it's 44 px, beside the expand arrow without touching it.
+    - **Mouse or tap:** it closes the panel, removes the cyan outline, empties `townActive`, and leaves 1-family on, in the link too.
+    - **Keyboard:** Enter does the same on desktop.
+  - **Errors:** none in any run.
+  - **Two tour problems found:** see "Found after the merge" below.
 
-**Your checks.** Run the site locally from the branch: `git fetch origin`, `git checkout claude/filter-refactor`, `python -m http.server 8000`, and open http://localhost:8000/map/.
+**Found after the merge** (2026-10-05). Fixed the same day, but not committed yet:
+- [x] Fixes approved in chat (2026-10-05): both tour fixes and the focus fix, as one small change.
+- **Desktop: the tour's first popover starts above the screen.**
+  - **What you'd see:**
+    - **The cut:** on a laptop, the top of the first box ("Hawaii Zoning Atlas") is hidden.
+    - **How bad:** in a 1366×768 laptop's browser window, only its last line and buttons show.
+  - **How much is cut,** by browser window size:
+
+    | Window | Before the merge | Now |
+    |---|---|---|
+    | 1920×969 | none | none |
+    | 1440×789 | none | 74 px |
+    | 1536×730 | 11 px | 104 px |
+    | 1366×657 | 48 px | 140 px |
+    | 1280×633 | 60 px | 152 px |
+
+  - **Why:**
+    - **The step:** step 1 highlights the whole sidebar.
+    - **The scroll:** Driver.js centers a step that's taller than the sidebar, which pushes the step's top above the screen. The popover lines up with that top.
+    - **Why it got worse:** the new sidebar is 975 px tall instead of 788.
+  - **Fix:** one line in [scripts/map.js](scripts/map.js). Every step scrolls into view with `block: 'nearest'`, as phones already do.
+- **Phones: the teal ring covers the edge of the text.**
+  - **What you'd see:** the highlight hugs the section, so its 3 px ring sits on the letters at its edges.
+    - **At 320 px:** the "t" of "type you turn on stay colored." disappears in step 3.
+    - **The Map/Satellite step:** the end of "Satellite" is cut off.
+    - **At 375 px:** it only grazes the first letters, which is why it's hard to spot on an iPhone SE.
+  - **Fix:**
+    - **`style.css`:** while the tour runs, the four sidebar sections and the Map/Satellite list get 6 px of room on each side, with a matching negative margin. The text stays where it is, and the ring lands beside it.
+    - **`map.js`:** it marks the page with a `tourRunning` class while the tour runs. The class is set before Driver.js measures each step, and removed when the tour ends.
+- **The area panel's ✕ dropped keyboard focus** to the top of the page (from the code review).
+  - **Fix:** focus moves to the map, where the district was clicked, so the next Tab continues from there.
+  - **Leaflet limit:** no focus ring shows on the map. Leaflet 1.7.1 hides it, and that was already true when you Tab to the map. Forcing it back would put a ring around the whole map after every mouse click.
+- **Code review:** the other violations are listed in chat. They're small, and none is a security issue: a misplaced comment, raw sizes in `style.css`, the Utilities block's place, black's formatting in `check_data.py`, and `var initMap`.
+
+**Claude's checks for the fixes** (headless Edge, real fonts and CDNs, local copy):
+- **Desktop tour:** every popover is fully on screen, with its buttons showing, in all 7 steps. Tested in browser windows of 1920×969, 1536×730, 1440×789, 1366×657, 1280×633, and 1400×900.
+- **Phone tour** (375×667 and 320×568):
+  - **The ring:** it now clears the text by 6 px in every step, including Map/Satellite.
+  - **Unchanged:** everything else passes as before:
+    - popovers stay above the drawer, and the buttons always show
+    - the highlight stays inside the drawer and off the tab bar
+    - there's no sideways scroll, and no district is selected afterward
+  - **After the tour:** the `tourRunning` class is gone.
+- **The ✕** (desktop, tablet, and phone): after closing, focus is on the map instead of the page.
+  - **The rest:** the panel closes, the outline goes, and the filters stay.
+  - **Keyboard:** Enter does the same.
+  - **Mouse:** no ring appears on the map after a mouse click, as before.
+- **Drawer bar:** unchanged at 280, 320, and 375 px.
+- **Errors:** none in any run.
+
+**Your checks for the fixes.** Run the site locally (`python -m http.server 8000`, then http://localhost:8000/map/), because these aren't pushed yet. Before each tour, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
+- [ ] **Do:** with the device toolbar on Responsive 1366×657, run the tour. **You'll see:** the first box's title, "Hawaii Zoning Atlas", and all of its text, below the top of the screen. **It means:** the tour's first step fits a laptop screen again.
+- [ ] **Do:** with the device toolbar on Responsive 320×568, run the tour.
+  - **You'll see:**
+    - In step 3, "type you turn on stay colored." reads in full inside the teal ring.
+    - In step 6, "Satellite" isn't cut off.
+  - **It means:** the ring outlines each step without covering its text.
+- [ ] **Do:** on desktop, click a district, press Tab until the panel's ✕ is focused, then press Enter, then Tab once more.
+  - **You'll see:**
+    - The panel closes.
+    - The next Tab lands on the map's zoom-in button (+), not on the Home link at the top of the page.
+  - **It means:** closing the panel no longer throws keyboard users back to the start.
+
+**Your checks.** It's live, so use https://hawaiizoningatlas.netlify.app/map/. Or run the site locally from `main`: `git pull`, `python -m http.server 8000`, and open http://localhost:8000/map/.
 - [X] **Do:** look at the sidebar. **You'll see:**
   - "Housing types", with five plain checkboxes.
   - Overlays with the new names.
