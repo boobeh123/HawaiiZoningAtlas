@@ -1174,6 +1174,16 @@ Media queries
     overflow: hidden;
   }
 
+  /* During the tour the highlight hugs each step, so the sidebar's sections
+     and the map's Map/Satellite switch get room on their sides for its ring,
+     which would otherwise cover the letters at their edges. The negative
+     margin keeps their content where it is. (map.js sets .tourRunning before
+     Driver.js measures a step, and removes it when the tour ends.) */
+  .tourRunning :is(#form > *, .leaflet-control-layers-list) {
+    margin-inline: calc(-1 * var(--spaceXs));
+    padding-inline: var(--spaceXs);
+  }
+
   /* The popover's arrow would point at the wrong place. driver.min.css loads
      after this file, hence the !important */
   #driver-popover-item .driver-popover-tip {
