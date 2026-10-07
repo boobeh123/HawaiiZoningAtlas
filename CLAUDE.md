@@ -62,6 +62,7 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
   - **Home (`index.html`, at `/`):** what the atlas shows, how to read the map, and "Try it" links that open the map already set up. It uses links in the shared-link format.
     - **County table:** `scripts/countyStats.js` (deferred) builds "The four counties at a glance" from `data/demographics.js`, the same file as the map's area panel. Rerunning `tools/fetchDemographics.js` updates both.
     - **County names:** the data's keys have no ʻokina, so the script maps them to display names.
+    - **How current the research is:** static HTML that lists each county's code edition and the zoning changes since. It's kept in step with `data-pipeline/law-updates.csv` by hand (see Law updates).
     - **Plain:** semantic HTML and `style.css` only, with no Tachyons, jQuery, Leaflet, or map data.
   - **The map (`map/index.html`, at `/map/`):** everything below is about this page.
   - **Root-relative paths:** both pages load assets from the site's root (`/style.css`, `/data/…`, `/scripts/…`). So the site has to be served from a domain root, as Netlify and `python -m http.server` both do.
@@ -178,6 +179,13 @@ The site deploys on Netlify (https://hawaiizoningatlas.netlify.app) from the rep
 1. **Source.** The research team's Google Sheet, with one tab per county. It's the team's record, so it's only ever read, never edited. The weekly sync is `spreadsheet.yml`: Mondays at 10:00 UTC, plus a **Run workflow** button.
    - **Pull:** `pull_sheet.py` downloads the four tabs through Google's public CSV export and writes `data-pipeline/hawaii-zoning-data.csv`, the notebook's input.
    - **Corrections on the way in:** it changes the sheet's "Kauaʻi" to "Kauai", fills in Maui `P`'s blank State, Jurisdiction, and County, and fixes the `OD/PD` typo.
+   - **Law updates:** `apply_law_updates()` applies `data-pipeline/law-updates.csv`, which records laws passed after the research, one changed cell per row.
+     - **Each row:** the district, the column, the change (`replace` or `append`), the sheet's value, the new value, the law, when it took effect, and a source URL.
+     - **Safe if the team updates the sheet:** a `replace` only applies while the sheet still has the old value, and an `append` only adds its sentence once. A skipped update is printed.
+     - **Typos fail loudly:** a district or column that doesn't exist stops the run.
+     - **Fill the map's columns:** an update that newly allows a housing type should also set that type's minimum lot and its affordable-only and elderly-only answers. A blank elderly-only answer would bring the hidden elderly filter back (see Options that change nothing).
+     - **Home lists them:** its "How current the research is" section lists each county's code edition and the changes since, marked "On the map" or "Not on the map yet". Change it together with `law-updates.csv`.
+     - **Decided:** only laws passed since the research go here. Bobby keeps the researchers' own judgment calls as they wrote them, even where we might code them differently (see Verify.md's Honolulu data check).
    - **Format:** it takes both header rows from Maui's tab and refuses to run if any tab's column names differ. With an unchanged sheet, its output is byte-identical to the committed CSV.
    - **Checks:** `validation.py` checks the CSV. If it changed, the workflow runs the notebook, and `check_data.py` checks the result: all four counties, no county losing over a fifth of its districts, every filter option in `data/filters.json` still matching, and flag formats.
    - **Push:** after the checks, `github-actions[bot]` commits with `pull_sheet.py`'s summary of changed cells and pushes to `main`, which deploys. A failure pushes nothing, and GitHub emails the owner.
