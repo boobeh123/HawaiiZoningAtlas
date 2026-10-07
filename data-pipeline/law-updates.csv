@@ -1,0 +1,21 @@
+Jurisdiction,District,Column,Change,Sheet value,New value,Law,In effect,Source
+Honolulu,B-1,Type of Zoning District,replace,Nonresidential,Mixed with Residential,"Ordinance 25-2, Table 21-5.1",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,3-Family Treatment,replace,Prohibited,Allowed/Conditional,"Ordinance 25-2, Table 21-5.1 and Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,4+-Family Treatment,replace,Prohibited,Allowed/Conditional,"Ordinance 25-2, Table 21-5.1 and Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,3-Family Affordable Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,3-Family Elderly Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,3-Family Min. Lot (ACRES),replace,,0.115,"Ordinance 25-2, Table 21-3.4 (5,000 square feet)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,4+-Family Affordable Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,4+-Family Elderly Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,4+-Family Min. Lot (ACRES),replace,,0.115,"Ordinance 25-2, Table 21-3.4 (5,000 square feet)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-1,Special Notes,append,,"Updated for Ordinance 25-2 (in effect January 3, 2025): buildings with 3 or more homes are allowed by right, with the homes above ground-floor businesses or with a minimum amount of commercial space on the lot. Houses and duplexes still aren't allowed.","Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,Type of Zoning District,replace,Nonresidential,Mixed with Residential,"Ordinance 25-2, Table 21-5.1",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,3-Family Treatment,replace,Prohibited,Allowed/Conditional,"Ordinance 25-2, Table 21-5.1 and Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,4+-Family Treatment,replace,Prohibited,Allowed/Conditional,"Ordinance 25-2, Table 21-5.1 and Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,3-Family Affordable Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,3-Family Elderly Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,3-Family Min. Lot (ACRES),replace,,0.115,"Ordinance 25-2, Table 21-3.4 (5,000 square feet)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,4+-Family Affordable Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,4+-Family Elderly Housing Only,replace,,No,"Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,4+-Family Min. Lot (ACRES),replace,,0.115,"Ordinance 25-2, Table 21-3.4 (5,000 square feet)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
+Honolulu,B-2,Special Notes,append,,"Updated for Ordinance 25-2 (in effect January 3, 2025): buildings with 3 or more homes are allowed by right, with the homes above ground-floor businesses or with a minimum amount of commercial space on the lot. Houses and duplexes still aren't allowed.","Ordinance 25-2, Sec. 21-5.50-1(c)",2025-01-03,https://files.amlegal.com/pdffiles/Honolulu/ORD25-002.pdf
