@@ -829,6 +829,68 @@ p .zoneSwatch {
   letter-spacing: 0.03em;
 }
 
+/* How current the research is: each county's code, and the changes since */
+.sourceList {
+  display: grid;
+  gap: var(--spaceMd);
+  margin: var(--spaceMd) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sourceCard {
+  padding: var(--spaceMd);
+  border: 1px solid var(--colorBorder);
+  border-radius: 8px;
+}
+
+.sourceCard h3 {
+  margin: 0 0 var(--spaceXs);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeBase);
+  letter-spacing: 0.02em;
+}
+
+.sourceCard p {
+  margin: 0 0 var(--spaceSm);
+}
+
+.changeList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changeList li + li {
+  margin-top: var(--spaceSm);
+}
+
+/* The status reads as text, so it doesn't rely on its color */
+.changeStatus {
+  display: inline-block;
+  margin-right: var(--spaceXs);
+  padding: 0 var(--spaceXs);
+  border: 1px solid var(--colorTextMuted);
+  border-radius: 999px;
+  color: var(--colorTextMuted);
+  font-family: var(--fontHeading);
+  font-size: var(--fontSizeSm);
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.changeStatusOnMap {
+  border-color: var(--colorBrand);
+  color: var(--colorBrand);
+}
+
+.sourceNote {
+  margin-top: var(--spaceMd);
+  color: var(--colorTextMuted);
+  font-size: var(--fontSizeSm);
+}
+
 .homeFooter {
   max-width: 42rem;
   margin: 0 auto;
