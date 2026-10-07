@@ -205,6 +205,7 @@ The **Jupyter** notebook [CombineJurisdictions.ipynb](data-pipeline/CombineJuris
 
 Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows/spreadsheet.yml)) keeps the map in sync with the spreadsheet:
 - [pull_sheet.py](data-pipeline/pull_sheet.py) reads the sheet without editing it, and fixes a few known problems on the way in.
+- It also applies [law-updates.csv](data-pipeline/law-updates.csv): zoning laws passed after the research, recorded cell by cell with their sources.
 - If anything changed, the workflow reruns the notebook.
 - [check_data.py](data-pipeline/check_data.py) then confirms that every county and every filter still works.
 - Finally, the workflow commits the new data with a plain-language list of what changed, and Netlify deploys it. If any check fails, nothing is pushed.
@@ -214,7 +215,7 @@ Every Monday, a **GitHub Actions** workflow ([spreadsheet.yml](.github/workflows
 The site has two pages, linked by a Home · Map navbar. It's a tab bar along the bottom on phones and a top bar on wider screens.
 
 - **Home** ([index.html](index.html), at `/`):
-  - **What's on it:** what the atlas shows, how to read the map, and "Try it" links that open the map already set up.
+  - **What's on it:** what the atlas shows, how to read the map, "Try it" links that open the map already set up, and how current the research is.
   - **How it's built:** plain HTML and CSS with no map scripts, so it loads in a fraction of the map's size.
   - **Old links:** anything shared from the map before it moved to `/map/` still works, because [scripts/home.js](scripts/home.js) sends it there.
 - **The map** ([map/index.html](map/index.html), at `/map/`): it holds the sidebar and the map, and [scripts/map.js](scripts/map.js) does the rest with **Leaflet** and **jQuery**. The sidebar is semantic HTML styled by `style.css`; only the area panel still uses **Tachyons** classes.
@@ -284,9 +285,14 @@ It finds each value by its label, because the Census Bureau renumbers variables 
   - **ADU rules:** positively worded, with no double negatives.
   - **Hidden options:** ones that change nothing on today's data are hidden until they would.
   - **The rest of the sidebar:** semantic HTML, with fieldsets, legends, and a real label for the opacity slider.
+- **Law updates:** zoning laws passed after the research can now be added cell by cell, with their sources, while the research team's spreadsheet stays as they wrote it.
+  - **The first:** Honolulu's Ordinance 25-2 (2025) allows buildings with 3 or more homes in its B-1 and B-2 business districts.
+  - **On Home:** a section lists each county's zoning code edition and the changes since, marked "On the map" or "Not on the map yet".
 
 #### Up next
 
-- Home page stats and more Census data, starting with a check of Honolulu's 3- and 4+-family coding
+- Home page stats and more Census data
+- ADU rules for all four counties, once the state's December 31, 2026 deadline for allowing two ADUs per lot has passed
+- A spot check of Hawaiʻi County's and Kauaʻi's data, which no second researcher reviewed
 - Semantic HTML and accessibility for the area panel
 - Replace the area panel's Tachyons with plain CSS
