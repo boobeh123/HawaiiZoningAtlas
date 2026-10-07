@@ -2,7 +2,9 @@
 
 The master Google Sheet is the research team's record, so this only reads it,
 through Google's public CSV export. A few known problems in the sheet are
-fixed on the way in (see correct_row) instead of in the sheet itself.
+fixed on the way in (see correct_row) instead of in the sheet itself. Laws
+passed after the research are added the same way, from law-updates.csv (see
+apply_law_updates).
 
 Run it from data-pipeline/:
 
@@ -36,6 +38,9 @@ TABS = {
 HEADER_TAB = "Maui"
 
 OUTPUT = Path(__file__).parent / "hawaii-zoning-data.csv"
+
+# Laws passed after the research, one changed cell per row
+LAW_UPDATES = Path(__file__).parent / "law-updates.csv"
 
 # Most changed cells to list in the summary before cutting it short
 SUMMARY_LIMIT = 40
@@ -88,6 +93,68 @@ def correct_row(row, column):
         and row[column["Abbreviated District Name"]] == "OD/PD"
     ):
         row[column["Abbreviated District Name"]] = "OS/PD"
+
+
+def apply_law_updates(rows, column):
+    """Applies law-updates.csv to the sheet's rows, in place.
+
+    Each row of that file changes one cell, for a law passed after the
+    research. "replace" swaps the sheet's value for a new one, and "append"
+    adds a sentence to the end of the cell. Like the fixes in correct_row, an
+    update only applies while the sheet still has the old value, so the team
+    updating the sheet later is harmless. A district or column that doesn't
+    exist stops the run, so a typo can't quietly do nothing.
+
+    Returns how many updates applied, and a line for each one skipped because
+    the sheet has changed since.
+    """
+    with open(LAW_UPDATES, encoding="utf-8", newline="") as file:
+        updates = list(csv.DictReader(file))
+
+    districts = {}
+    for row in rows[2:]:
+        key = (
+            row[column["Jurisdiction"]].strip(),
+            row[column["Abbreviated District Name"]].strip(),
+        )
+        districts.setdefault(key, []).append(row)
+
+    applied = 0
+    skipped = []
+    for update in updates:
+        key = (update["Jurisdiction"], update["District"])
+        name = f"{key[0]} {key[1]}, {update['Column']}"
+        matches = districts.get(key, [])
+        if len(matches) != 1:
+            raise SystemExit(
+                f"{LAW_UPDATES.name}: {key[0]} {key[1]} matches "
+                f"{len(matches)} districts instead of 1"
+            )
+        if update["Column"] not in column:
+            raise SystemExit(
+                f"{LAW_UPDATES.name}: there's no column named {update['Column']!r}"
+            )
+        row = matches[0]
+        cell = column[update["Column"]]
+        new_value = update["New value"]
+
+        if update["Change"] == "replace":
+            if row[cell].strip() == new_value.strip():
+                continue
+            if row[cell].strip() != update["Sheet value"].strip():
+                skipped.append(f"{name}: the sheet now says {row[cell] or '(blank)'}")
+                continue
+            row[cell] = new_value
+        elif update["Change"] == "append":
+            if new_value in row[cell]:
+                continue
+            row[cell] = f"{row[cell].strip()} {new_value}".strip()
+        else:
+            raise SystemExit(
+                f"{LAW_UPDATES.name}: unknown change {update['Change']!r} for {name}"
+            )
+        applied += 1
+    return applied, skipped
 
 
 def normalize_newlines(rows):
@@ -159,6 +226,7 @@ def main():
     rows = tabs[HEADER_TAB][:2] + [row for tab in tabs.values() for row in tab[2:]]
     for row in rows[2:]:
         correct_row(row, column)
+    applied, skipped = apply_law_updates(rows, column)
 
     rows = normalize_newlines(rows)
 
@@ -176,6 +244,9 @@ def main():
 
     changes = describe_changes(old_rows, rows, column) if old_rows else ["New file"]
     print(f"Wrote {OUTPUT.name}: {len(rows) - 2} districts from {len(tabs)} tabs")
+    print(f"Applied {applied} law update(s) from {LAW_UPDATES.name}")
+    for line in skipped:
+        print(f"  Skipped, because the sheet has changed: {line}")
     if changes:
         print(f"{len(changes)} change(s):")
         for line in changes[:SUMMARY_LIMIT]:
