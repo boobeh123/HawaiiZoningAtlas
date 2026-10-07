@@ -6,6 +6,149 @@ This file holds checklists for Bobby to run or review, newest first. Tick a box 
 
 ---
 
+## Law updates, and "How current the research is" on Home (built and committed)
+
+- [x] Plan approved in chat (2026-10-06).
+  - **The Home section:** it replaces the plan's one sentence, at your request for "a section on our home `/` route that displays the start of the publications, and if anything changed/updated since".
+
+**Why:**
+- **The research:** the team read the county codes in 2022 and 2023, and Kauaʻi's by early 2024.
+- **Your copy:** your local copy of the master sheet matches the live Google Sheet, cell for cell.
+- **Not a rebuild:** rebuilding the sheet from today's codes was considered, and rejected.
+  - **Why:** Claude's reading of a code can be wrong, as it was with Honolulu's apartments, where the team's planner answers were right.
+  - **Instead:** each law passed since is recorded on top of the research, with its source.
+
+**Inventory: each county's code, and the changes since.** This is what we've found as of 2026-10-06, not a complete list.
+
+| County | Code the research used | Change since | What it changes | On the map? |
+|---|---|---|---|---|
+| Hawaiʻi | County Code Chapter 25, edition published 2022-04-04 | Bill 123 (Council, September 2024) | up to 3 ADUs per lot where ʻohana units are allowed | not yet (ADUs come in January) |
+| Honolulu | ROH 2021 Chapter 21, as read in 2022–23 | Ordinance 25-2 (2025-01-03) | a new use table; B-1 and B-2 allow buildings with 3+ homes by right | **yes**, in this feature |
+| Honolulu | | Ordinance 25-2 (2025-09-30) | an ADU and an ʻohana unit on one lot; ADUs up to 500 or 1,000 sq ft | not yet (ADUs) |
+| Maui | County Code Title 19, as read in 2022–23 | Ordinance 6013 (2026-07-08) | up to 2 accessory dwellings on qualifying residential lots | not yet (ADUs) |
+| Maui | | the Title 19 rewrite | the whole zoning code | in progress |
+| Kauaʻi | County Code Chapter 8, as read by early 2024 | Ordinance 1166 (2024-10-25) | guest houses up to 800 sq ft, rentable long-term, in more districts | not yet (ADUs) |
+| Kauaʻi | | Ordinance 1173 (2025-05-19) | amends Chapter 8; what it changes isn't checked yet | to check |
+| Statewide | | Act 39 (2024) | at least 2 ADUs on residential lots by 2026-12-31 | not yet (ADUs) |
+
+- **For the farm-district question you deferred:** Ordinance 25-2's new use table lists farm dwellings as an accessory use ("Ac") in AG-1 and AG-2. Nothing was changed.
+
+**What changed:**
+- [data-pipeline/law-updates.csv](data-pipeline/law-updates.csv) (new): 20 rows, 10 each for Honolulu's B-1 and B-2.
+  - **Zone type:** Nonresidential becomes Mixed with Residential.
+  - **3- and 4+-family homes:** Prohibited becomes Allowed/Conditional.
+  - **Their other answers:**
+    - minimum lot: 5,000 sq ft, written 0.115 acres as the team does
+    - affordable-only and elderly-only: No
+  - **Special Notes:** a sentence naming Ordinance 25-2.
+  - **Sources:** each row cites the ordinance's section: Table 21-5.1, Sec. 21-5.50-1(c), and Table 21-3.4.
+- [data-pipeline/pull_sheet.py](data-pipeline/pull_sheet.py): `apply_law_updates()` applies the file after `correct_row()`. The summary prints how many updates applied, and any that were skipped.
+- **Regenerated:** `hawaii-zoning-data.csv`, `final.csv`, and both copies of `final.geojson`. Only B-1 and B-2 changed.
+- [index.html](index.html) and [style.css](style.css): the "How current the research is" section.
+  - **Its cards:** one per county, plus one for statewide laws.
+  - **Each card:** the code edition the research used, and the changes since, marked "On the map" or "Not on the map yet".
+- **Docs:** CLAUDE.md (Law updates, and Home), [data-pipeline/README.md](data-pipeline/README.md), and the README.
+
+**Claude's checks:**
+- **`pull_sheet.py`:**
+  - **The pull:** 20 updates applied, and the CSV differs from the committed one in exactly those 20 cells.
+  - **A second run:** "No changes".
+  - **Simulated:**
+    - the team changing a cell: skipped, with a message
+    - the team making the same change: nothing to do
+    - a misspelled district, column, or change: stops the run
+    - an append: runs once
+- **The pipeline:** the validator and the notebook ran, and `check_data.py` said "All checks passed".
+- **`final.geojson`:**
+  - **Shapes:** 261 features, and none changed.
+  - **B-1 and B-2:** the only features that changed: zone type N → M, 3F and 4F N → A, lot-size bucket A → B, and the note.
+- **The map** (headless Edge, real CDNs):
+  - **Coloring:** with 4+-family homes on, B-1 and B-2 color in the Mixed purple.
+  - **Hidden options:** they stay hidden.
+  - **The panel:** clicking B-2 shows the new sentence after the team's note.
+  - **Honolulu's 4+-family share:** 60.8% → 61.7%.
+  - **Errors:** none.
+- **Home:**
+  - **Sizes checked:** 1400, 375, and 320 px wide.
+  - **What shows:** 5 cards, 1 "On the map" and 5 "Not on the map yet", with no sideways scroll.
+  - **The links:** all 3 work.
+  - **The status:** it reads as text, so it doesn't rely on color.
+
+**Your checks.** It's live, so use https://hawaiizoningatlas.netlify.app. Or run the site locally (`python -m http.server 8000`, at http://localhost:8000).
+- [ ] **Do:** open the Home page and scroll to "How current the research is".
+  - **You'll see:** five cards, one for each county and one for statewide laws. Honolulu's Ordinance 25-2 is marked "On the map", and everything else "Not on the map yet".
+  - **It means:** visitors can see how old the research is and what's changed since.
+- [ ] **Do:** open https://hawaiizoningatlas.netlify.app/map/#16/21.33381/-158.08154/4F=&4F=A&4F=AH&4MLS=A&4MLS=B&4MLS=C&4MLS=D&4MLS=E&opacity=90 (4+-family homes on, in Kapolei).
+  - **You'll see:** the B-2 business district in the middle stays deep purple instead of turning gray, as it did before this change.
+  - **Click it:** its note ends with "Updated for Ordinance 25-2…".
+  - **It means:** apartments over shops are allowed there by right now, and the map shows it.
+- [ ] **Do:** in Git Bash from `data-pipeline/`, run `~/hza/Scripts/python pull_sheet.py`.
+  - **You'll see:** "Applied 20 law update(s) from law-updates.csv", then "No changes".
+  - **It means:** the weekly sync applies the updates every time, so they can't get lost.
+- [ ] **Do:** open `data-pipeline/law-updates.csv`.
+  - **You'll see:** one row per changed cell, each with the old value, the new one, the ordinance section, and a link.
+  - **It means:** every change made on top of the team's research is listed, with its source.
+
+---
+
+## The Honolulu data check (done; the researchers' coding stays, and the farm districts are deferred)
+
+- [x] Decided in chat (2026-10-05): keep the researchers' coding for now, and come back to the farm districts later.
+
+**The question:** as coded, every housing type lights up about 61% of Honolulu's zoned land, so Oʻahu's map looks the same whichever type you pick. This is the to-do under "Next up", item 3.
+
+**Sources:**
+- **The research team's own log:** the master sheet's Discrepancies tab, with their questions and the county planner's answers.
+- **Honolulu's Land Use Ordinance** (ROH Chapter 21):
+  - **The old links:** the city's PDF links in that log now return 404.
+  - **What I used:** a full copy from about 2010 (on hlsahawaii.starchapter.com), and the current sections that show in American Legal Publishing's search results.
+
+**Finding 1: the apartment coding is right.**
+- **How it's allowed:** R-3.5 through R-20 allow 3- and 4+-family homes through **cluster housing**.
+  - **Up to 8 homes** per building.
+  - **Site size:** at least three times the district's minimum lot, for example 15,000 sq ft in R-5.
+- **No hearing:** clusters need the director's approval, but no public hearing.
+  - **Sec. 21-2.110:** it lists cluster housing, agricultural clusters, and country clusters as exceptions to the major and minor permit process.
+  - **The planner:** confirmed it (Discrepancies row 28).
+- **The more common route:** the planner said clusters are more common than PD-H planned developments, which do need a hearing (row 29).
+- **So:** the to-do's worry about public hearings was wrong.
+
+**Finding 2: the farm districts drive the 61%.**
+- **Their size:** AG-1 and AG-2 are 38% of Honolulu's zoned land. Without them, each housing type is allowed on about 23%.
+- **Only farm dwellings:** every home allowed there is a farm dwelling, one used with a farm that provides the family's income.
+  - **Sec. 21-8.30:** three to six farm dwellings per lot, with the director's site plan.
+  - **Sec. 21-3.50-2:** agricultural clusters allow detached, duplex, and up to 4-unit buildings, all counted as farm dwellings: one per 5 acres in AG-1, one per 2 acres in AG-2.
+- **The team's own answer** (Discrepancies row 2):
+  - **The question:** "Are we tracking farm dwellings as (n) family housing?"
+  - **The answer:** "No … Add as special note in Ag districts."
+  - **What happened:** the note was added, but the coding still says allowed.
+- **The other counties:**
+  - **Hawaiʻi County and Maui:** their farm districts are coded as not allowing homes.
+  - **Kauaʻi:** its A district is coded as allowing up to 5 homes, which may be what its code really says. That's left for its own check.
+
+**The fix, if we come back to it (not built):**
+- **`data-pipeline/pull_sheet.py`:** on the way in, set Honolulu AG-1 and AG-2's 1-, 2-, 3-, and 4+-family treatment to "Prohibited".
+  - **Unchanged:** ADUs (ʻohana dwellings) and the notes.
+  - **The sheet:** it stays untouched.
+- **Rerun the pipeline:** the notebook, then `check_data.py`.
+- **Home (`index.html`):** one sentence changes. The Small lots card says most of the rest of the island "needs a much bigger lot, or doesn't allow homes at all". After the fix, land that needs a bigger lot drops from 39% of Oʻahu to 2%, so it would say most of the rest doesn't allow homes.
+- **Effect on Oʻahu:**
+  - **Each housing type:** from about 61% of zoned land to about 23%.
+  - **Unchanged:** homes on small lots stay at 21%, and ADUs at 64%.
+
+**Smaller things found (not on the map):**
+- **R-20:** its planned-development column says "Allowed/Conditional", but its note says PD-H needs a public hearing.
+- **AG-1:** its note lacks AG-2's sentence about agricultural clusters, though both are coded the same.
+
+**Decision (2026-10-05):** keep the researchers' coding, and defer the farm districts.
+- **The map:** it stays as it is, so Oʻahu still shows about 61% for every housing type.
+- **The farm districts' notes:** they explain that the homes there are farm dwellings.
+- **The other options, for later:**
+  - recode the farm districts (the fix above)
+  - ask the research team whether row 2's "No" was their final answer
+
+---
+
 ## Roadmap item 2: A filter refactor (merged and live)
 
 - [x] Plan approved in chat (2026-10-04), with the recommended choice for all four decisions at the end.
@@ -311,7 +454,7 @@ Districts that allow every type you turn on stay colored.
 - **Drawer bar:** unchanged at 280, 320, and 375 px.
 - **Errors:** none in any run.
 
-**Your checks for the fixes.** Run the site locally (`python -m http.server 8000`, then http://localhost:8000/map/), because these aren't pushed yet. Before each tour, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
+**Your checks for the fixes.** They're live (pushed as `451c1fd..d90360a`), so use https://hawaiizoningatlas.netlify.app/map/. Before each tour, run `localStorage.removeItem('hzaTourSeen')` in the console and reload.
 - [ ] **Do:** with the device toolbar on Responsive 1366×657, run the tour. **You'll see:** the first box's title, "Hawaii Zoning Atlas", and all of its text, below the top of the screen. **It means:** the tour's first step fits a laptop screen again.
 - [ ] **Do:** with the device toolbar on Responsive 320×568, run the tour.
   - **You'll see:**
@@ -709,7 +852,11 @@ These ideas came from our chat on 2026-10-04 and were only in chat until now. Th
    - **Stats:** the pipeline writes a small `data/stats.json`, so Home never downloads the 12.6 MB map file. The weekly sync keeps it current.
    - **Census:** more tables from `tools/fetchDemographics.js`, which you run, since the key stays on your machine. For example, housing units by number of units per building would show what's built next to what zoning allows.
    - **Charts:** plain HTML and CSS, each with a table under it, so no new library.
-   - [ ] **To do before any chart, not a check of something built:** settle whether Honolulu's apartment coding is right. Leave this box empty until then.
+   - [x] **To do before any chart, not a check of something built:** settle whether Honolulu's apartment coding is right. Leave this box empty until then.
+     - **Settled (2026-10-05):** see "The Honolulu data check" at the top of this file.
+       - **The apartments:** the coding is right, through cluster housing, which needs no hearing.
+       - **The 61%:** it comes from the farm districts. You chose to keep the researchers' coding and defer them.
+       - **The notes below:** they describe the first guess.
      - **What the spreadsheet says:** Honolulu's main residential districts (R-5 through R-10) and its farm districts allow buildings with 3 or more homes "as of right", meaning no hearing is needed.
      - **What the districts' own notes say:** buildings with 3 or more homes are allowed only through a planned development, which needs a public hearing. If the notes are right, those districts should say "public hearing" instead.
      - **Why it matters:** as coded, 1-family, 2-family, and 4+-family housing each light up 61% of Honolulu's zoned land, so the map looks almost the same whichever one you pick. Maui shows the story the atlas is meant to tell: 1-family homes are allowed on 35% of its zoned land, and 4+-family homes on 1%.
